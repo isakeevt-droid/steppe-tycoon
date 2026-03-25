@@ -12,7 +12,7 @@
       <div>
         <div class="eyebrow">Тёмная степь</div>
         <h1>Степной Шаман</h1>
-        <p class="sub">Жоска тыкай!.</p>
+        <p class="sub">Собирай билд, лови синергию, ломай боссов и не сливай золото в пустоту.</p>
       </div>
       <div class="stats-grid">
         <div class="stat"><span>Золото</span><strong id="gold">0</strong></div>
@@ -23,6 +23,20 @@
         <div class="stat"><span>Очки</span><strong id="score">0</strong></div>
       </div>
     </header>
+
+    <section class="panel build-bar">
+      <div class="build-top">
+        <div>
+          <div class="eyebrow">Текущий билд</div>
+          <div class="elements-row" id="build-elements"></div>
+        </div>
+        <div class="build-main-status">
+          <div class="mini-card compact"><span>Синергия</span><strong id="build-active-synergy">Билд не собран</strong></div>
+          <div class="mini-card compact"><span>Слабое место</span><strong id="build-weakness">—</strong></div>
+        </div>
+      </div>
+      <div class="build-strengths" id="build-strengths"></div>
+    </section>
 
     <main class="layout">
       <section class="panel battle-panel">
@@ -35,13 +49,20 @@
           <div class="stage-badge">Этап <span id="stage">1</span></div>
         </div>
 
+        <div class="boss-info hidden" id="boss-info">
+          <div class="mini-card compact grow"><span>Механика</span><strong id="boss-mechanic">—</strong></div>
+          <div class="mini-card compact grow"><span>Подсказка</span><strong id="boss-hint">—</strong></div>
+          <div class="mini-card compact" id="boss-timer-card"><span>Таймер</span><strong id="boss-timer">—</strong></div>
+        </div>
+
         <div class="enemy-wrap normal" id="enemy-wrap">
           <div class="enemy-rune rune-a"></div>
           <div class="enemy-rune rune-b"></div>
           <div class="enemy-rune-ring"></div>
           <div class="enemy-glyph" id="enemy-glyph">✦</div>
-          <img id="enemy-image" alt="Враг">
+          <img id="enemy-image" alt="Враг" class="hidden">
           <div id="hit-float" class="hit-float hidden"></div>
+          <div id="flash-banner" class="flash-banner hidden"></div>
         </div>
 
         <div class="hp-block">
@@ -61,13 +82,14 @@
             <img src="/assets/icons/high_shaman.svg" alt="Верховный шаман" class="high-shaman-icon">
             <div class="high-shaman-copy">
               <div class="card-title">Верховный шаман</div>
-              <div class="card-desc">Твоя основа. Его удар идёт с тапа, а апы делают руку тяжелее.</div>
+              <div class="card-desc">Основной тап, бурст и прожимы. На щитовых боссах именно он тащит катку.</div>
             </div>
           </div>
           <button id="tap-upgrade-btn" class="ghost-btn">Прокачать удар <span id="tap-upgrade-cost">0</span></button>
         </div>
 
-        <div class="tap-hint">жоска бей картинки(представь что ета крутые босы).</div>
+        <div class="skills-grid" id="skills-grid"></div>
+        <div class="tap-hint">Жми по врагу, лови криты и прожимай скиллы в жирные моменты.</div>
 
         <div class="summary-grid">
           <div class="mini-card"><span>Крит шанс</span><strong id="crit-chance">0%</strong></div>
@@ -79,25 +101,13 @@
         <div class="meta-power panel-lite">
           <div class="section-head meta-power-head">
             <h3>Сила перерождения</h3>
-            <p>Вот что уже капает с твоих трофеев и прошлых забегов.</p>
+            <p>Ребёрс теперь даёт очки меты, а не просто сухой множитель.</p>
           </div>
           <div class="meta-power-grid">
-            <div class="mini-card meta-card">
-              <span>Трофеи</span>
-              <strong id="meta-trophies">0</strong>
-            </div>
-            <div class="mini-card meta-card">
-              <span>Сила</span>
-              <strong id="meta-power-bonus">0%</strong>
-            </div>
-            <div class="mini-card meta-card">
-              <span>Золото</span>
-              <strong id="meta-gold-bonus">0%</strong>
-            </div>
-            <div class="mini-card meta-card">
-              <span>Крит урон</span>
-              <strong id="meta-crit-multiplier">x2</strong>
-            </div>
+            <div class="mini-card meta-card"><span>Трофеи</span><strong id="meta-trophies">0</strong></div>
+            <div class="mini-card meta-card"><span>Сила</span><strong id="meta-power-bonus">0%</strong></div>
+            <div class="mini-card meta-card"><span>Золото</span><strong id="meta-gold-bonus">0%</strong></div>
+            <div class="mini-card meta-card"><span>Крит урон</span><strong id="meta-crit-multiplier">x2</strong></div>
           </div>
         </div>
       </section>
@@ -107,19 +117,19 @@
           <div class="tabs-head">
             <button class="tab-btn active" data-tab="heroes">Герои</button>
             <button class="tab-btn" data-tab="rituals">Ритуалы</button>
-            <button class="tab-btn" data-tab="top">Топ</button>
-            <button class="tab-btn" data-tab="achievements">Достижения</button>
+            <button class="tab-btn" data-tab="meta">Мета</button>
+            <button class="tab-btn" data-tab="achievements">Прогресс</button>
           </div>
 
           <section class="tab-section active" data-panel="heroes">
             <div class="section-head">
               <h3>Герои стихий</h3>
-              <p>Тут всё по делу: каждый уровень даёт DPS, а на 10 / 25 / 50 / 100 идёт жирный буст.</p>
+              <p>Каждый герой качает стихию. Пороги 25/25 открывают синергию.</p>
             </div>
 
             <div class="section-head compact-head">
-              <h3>Активные герои сейчас</h3>
-              <p>Здесь показываются только те, кого ты уже нанял.</p>
+              <h3>Активные герои</h3>
+              <p>Тут только те, кого уже нанял.</p>
             </div>
             <div id="active-heroes-list" class="stack"></div>
 
@@ -127,30 +137,61 @@
               <h3>Все герои</h3>
             </div>
             <div id="heroes-list" class="stack"></div>
+
+            <div class="section-head compact-head">
+              <h3>Синергии</h3>
+              <p>Подсвеченная связка уже активна, остальные показывают путь к ней.</p>
+            </div>
+            <div id="synergies-list" class="stack"></div>
+
+            <div class="section-head compact-head">
+              <h3>Перестроить билд+</h3>
+              <p>Возврат 70% золота с героев. Ошибся — пересобрался, но не бесконечно.</p>
+            </div>
+            <div class="respec-box panel-lite">
+              <div class="respec-row">
+                <div class="mini-card compact grow"><span>Вернётся</span><strong id="respec-refund">0</strong></div>
+                <div class="mini-card compact grow"><span>КД</span><strong id="respec-cooldown">0с</strong></div>
+              </div>
+              <div class="preset-grid">
+                <button class="action-btn preset-btn" data-preset="crit">🔥⚡ Крит</button>
+                <button class="action-btn preset-btn" data-preset="farm">🌊💰 Фарм</button>
+                <button class="action-btn preset-btn" data-preset="boss">🪨🐉 Босс</button>
+              </div>
+              <button class="danger-btn" id="respec-btn">Пересобрать без пресета</button>
+            </div>
           </section>
 
           <section class="tab-section" data-panel="rituals">
             <div class="section-head">
               <h3>Ритуалы</h3>
-              <p>Ритуалы — это постоянный разгон. Закидываешь золото, получаешь мощь.</p>
+              <p>Пассивные статы плюс одна ветка фокуса под текущий стиль.</p>
             </div>
             <div id="rituals-list" class="stack"></div>
+            <div class="section-head compact-head">
+              <h3>Ветка ритуалов</h3>
+              <p>Выбирай один акцент: урон, фарм или охота на боссов.</p>
+            </div>
+            <div id="ritual-paths" class="stack"></div>
           </section>
 
-          <section class="tab-section" data-panel="top">
+          <section class="tab-section" data-panel="meta">
+            <div class="section-head">
+              <h3>Мета-усиления</h3>
+              <p>После ребёрса очки меты вливаются сюда.</p>
+            </div>
+            <div class="mini-card compact meta-points-card"><span>Очки меты</span><strong id="meta-points">0</strong></div>
+            <div id="meta-upgrades-list" class="stack"></div>
             <div class="section-head compact-head">
               <h3>Топ</h3>
             </div>
-            <div class="top-score-card mini-card">
-              <span>Очки</span>
-              <strong id="top-best-score">0</strong>
-            </div>
+            <div class="top-score-card mini-card"><span>Лучший счёт</span><strong id="top-best-score">0</strong></div>
           </section>
 
           <section class="tab-section" data-panel="achievements">
             <div class="section-head">
               <h3>Достижения</h3>
-              <p><span id="achievements-summary">0 / 0</span> тем уже закрыто.</p>
+              <p><span id="achievements-summary">0 / 0</span> уже закрыто.</p>
             </div>
             <div id="achievements-list" class="achievements-list"></div>
           </section>
@@ -159,7 +200,7 @@
         <section class="panel panel-danger">
           <div class="section-head">
             <h3>Перерождение</h3>
-            <p>Скидываешь текущий забег, забираешь трофеи и возвращаешься в степь уже мощнее.</p>
+            <p>Скидываешь забег, забираешь трофеи и очки меты, возвращаешься злее.</p>
           </div>
           <div class="rebirth-meta">
             <div class="mini-card"><span>Трофеи сейчас</span><strong id="rebirth-gain">0</strong></div>
