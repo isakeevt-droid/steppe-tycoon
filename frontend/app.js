@@ -506,8 +506,8 @@ function renderHoldHud(holdState, lastHit = null) {
   const waterActive = Boolean(holdState?.water_active);
   const earthActive = Boolean(holdState?.earth_active);
 
-  let textValue = waterActive ? 'С водой hold бьёт заметно злее.' : 'Без воды hold — ситуативный добор.';
-  if (earthActive) textValue += ' Земля сверху даёт щит верховному шаману.';
+  let textValue = waterActive ? 'С водой hold бьёт заметно злее.' : 'водяной шаман мошный hold делает.';
+  if (earthActive) textValue += ' Земля щит дает верховному шаману.';
   if (lastHit?.source === 'hold') {
     textValue = lastHit.combo_effect || 'Заряд выпущен.';
     if (Number(lastHit.player_healed || 0) > 0) textValue += ` · хил ${fmt(lastHit.player_healed)}`;
