@@ -14,8 +14,9 @@ from .heroes import active_hero_ids, active_pair_key, base_tap_damage, crit_chan
 from .models import BuyRequest, HoldRequest, PlayerIdentity, SwipeRequest
 from .payloads import build_payload
 from .player import apply_heal_to_player, apply_shield_to_player
-from .progression import build_achievements, push_top_run, rebirth_reward, tap_upgrade_cost, wave_number
+from .progression import build_achievements, push_top_run, rebirth_reward, score_value, tap_upgrade_cost, wave_number
 from .storage import fetch_leaderboard, get_identity, get_player_lock, init_db, load_player_state, save_player_state
+from .state import default_state
 
 app = FastAPI(title="Steppe Shaman")
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
