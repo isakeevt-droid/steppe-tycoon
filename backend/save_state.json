@@ -1,52 +1,32 @@
 {
-  "gold": 1424.0720000000003,
+  "gold": 221.95,
   "stage": 20,
   "kills": 19,
   "boss_kills": 1,
-  "last_tick": 1774379062.8243666,
   "tap_level": 1,
-  "heroes": {
-    "fire": 1,
-    "water": 1,
-    "earth": 0,
-    "air": 0
-  },
-  "rituals": {
-    "embers": 0,
-    "tide": 0,
-    "stone": 0,
-    "storm": 0
-  },
-  "trophies": 6,
-  "rebirths": 3,
   "best_stage": 20,
-  "best_wave": 2,
-  "best_tap": 19.9762556,
-  "best_dps": 81.55453414079999,
-  "best_score": 7900,
-  "lifetime_gold": 4918.678,
-  "lifetime_kills": 67,
-  "lifetime_boss_kills": 4,
-  "top_runs": [
-    {
-      "rebirth": 3,
-      "score": 5650,
-      "stage": 20,
-      "trophies": 2
-    },
-    {
-      "rebirth": 2,
-      "score": 3400,
-      "stage": 20,
-      "trophies": 2
-    },
-    {
-      "rebirth": 1,
-      "score": 775,
-      "stage": 11,
-      "trophies": 2
-    }
+  "last_tick": 1774457327.0758018,
+  "last_action": "Шаманы давят ровным уроном.",
+  "last_swipe_at": 1774457320.4444633,
+  "swipe_combo": 0,
+  "last_swipe_direction": "down_right",
+  "shamans": {
+    "fire": 1,
+    "air": 4,
+    "water": 1,
+    "earth": 1
+  },
+  "active_shamans": [
+    "water",
+    "fire"
   ],
+  "buffs": {
+    "fury_until": 1774457320.5511653,
+    "expose_until": 1774456724.0910347,
+    "mud_until": 1774456727.362085,
+    "burn_damage": 0.0,
+    "burn_until": 1774457326.6021905
+  },
   "enemy": {
     "id": "boss_idol",
     "name": "Громовой Идол",
@@ -54,8 +34,14 @@
     "glyph": "✦",
     "type": "boss",
     "flavor": "Каменная махина, заряженная молнией по полной.",
-    "hp": 24753.63,
+    "hp": 14894.01,
     "max_hp": 42204.47,
-    "reward": 2082.33
+    "reward": 2082.33,
+    "stage": 20,
+    "count": 1,
+    "armor": 0.0,
+    "armor_max": 0.0,
+    "vulnerable_until": 0.0,
+    "spawned_at": 1774456479.356854
   }
 }

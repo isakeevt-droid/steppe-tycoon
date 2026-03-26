@@ -2,187 +2,223 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Степной Шаман</title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css?v=20260327-hud">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div class="shell">
-    <header class="topbar panel">
-      <div>
-        <div class="eyebrow">Тёмная степь</div>
-        <h1>Степной Шаман</h1>
-        <p class="sub">Жоска тыкай!.</p>
+  <div class="app-shell">
+    <header class="hud-top panel">
+      <div class="brand-lockup">
+        <div class="brand-kicker">Тёмная степь</div>
+        <div class="brand-title-row">
+          <h1>Степной Шаман</h1>
+          <div class="boss-pill"><span id="enemy-type">Обычный замес</span></div>
+        </div>
+        <div class="brand-subline">Верховный шаман держит центр. Шаманы стихий дают связки. Боссов вскрывай тапом, свайпом и hold.</div>
       </div>
-      <div class="stats-grid">
-        <div class="stat"><span>Золото</span><strong id="gold">0</strong></div>
-        <div class="stat"><span>Тап</span><strong id="tap-damage">0</strong></div>
-        <div class="stat"><span>DPS</span><strong id="dps">0</strong></div>
-        <div class="stat"><span>Волна</span><strong id="wave">1</strong></div>
-        <div class="stat"><span>Трофеи</span><strong id="trophies">0</strong></div>
-        <div class="stat"><span>Очки</span><strong id="score">0</strong></div>
+
+      <div class="resource-rail">
+        <div class="resource-chip accent"><span>Золото</span><strong id="gold">0</strong></div>
+        <div class="resource-chip"><span>Тап</span><strong id="tap-damage">0</strong></div>
+        <div class="resource-chip"><span>DPS</span><strong id="dps">0</strong></div>
+        <div class="resource-chip"><span>Wave</span><strong id="wave">1</strong></div>
+        <div class="resource-chip"><span>Этап</span><strong id="stage">1</strong></div>
+        <div class="resource-chip"><span>Очки</span><strong id="score">0</strong></div>
+        <div class="resource-chip"><span>Трофеи</span><strong id="trophies">0</strong></div>
       </div>
     </header>
 
-    <main class="layout">
-      <section class="panel battle-panel">
-        <div class="battle-head">
+    <main class="hud-grid">
+      <section class="battle-zone panel">
+        <div class="battle-headline">
           <div>
-            <div class="eyebrow" id="enemy-type">Обычный враг</div>
+            <div class="label-row">
+              <span class="mini-label">Цель</span>
+              <span class="stage-chip">Волна <strong id="wave-top-inline">—</strong></span>
+            </div>
             <h2 id="enemy-name">...</h2>
-            <p class="enemy-flavor" id="enemy-flavor"></p>
+            <p id="enemy-flavor" class="enemy-flavor"></p>
           </div>
-          <div class="stage-badge">Этап <span id="stage">1</span></div>
-        </div>
-
-        <div class="enemy-wrap normal" id="enemy-wrap">
-          <div class="enemy-rune rune-a"></div>
-          <div class="enemy-rune rune-b"></div>
-          <div class="enemy-rune-ring"></div>
-          <div class="enemy-glyph" id="enemy-glyph">✦</div>
-          <img id="enemy-image" alt="Враг">
-          <div id="hit-float" class="hit-float hidden"></div>
-        </div>
-
-        <div class="hp-block">
-          <div class="hp-row">
-            <span>HP</span>
-            <strong id="enemy-hp">0 / 0</strong>
-          </div>
-          <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
-          <div class="reward-row">
-            <span>Награда: <strong id="enemy-reward">0</strong></span>
-            <span>Боссы: <strong id="boss-kills">0</strong></span>
+          <div class="battle-counters">
+            <div class="counter-box"><span>Награда</span><strong id="enemy-reward">0</strong></div>
+            <div class="counter-box"><span>Боссы</span><strong id="boss-kills">0</strong></div>
           </div>
         </div>
 
-        <div class="battle-actions battle-actions-single">
-          <div class="high-shaman-card">
-            <img src="/assets/icons/high_shaman.svg" alt="Верховный шаман" class="high-shaman-icon">
-            <div class="high-shaman-copy">
-              <div class="card-title">Верховный шаман</div>
-              <div class="card-desc">Твоя основа. Его удар идёт с тапа, а апы делают руку тяжелее.</div>
+        <div id="boss-mechanic-panel" class="boss-mechanic panel-lite hidden">
+          <div class="boss-line">
+            <div>
+              <div class="mini-label">Механика босса</div>
+              <div id="boss-mechanic-name" class="boss-name">—</div>
             </div>
+            <div id="boss-mechanic-phase" class="phase-pill">—</div>
           </div>
-          <button id="tap-upgrade-btn" class="ghost-btn">Прокачать удар <span id="tap-upgrade-cost">0</span></button>
+          <div id="boss-mechanic-desc" class="boss-desc"></div>
+          <div id="boss-mechanic-status" class="boss-status"></div>
         </div>
 
-        <div class="tap-hint">жоска бей картинки(представь что ета крутые босы).</div>
-
-        <div class="summary-grid">
-          <div class="mini-card"><span>Крит шанс</span><strong id="crit-chance">0%</strong></div>
-          <div class="mini-card"><span>Крит урон</span><strong id="crit-multiplier">x2</strong></div>
-          <div class="mini-card"><span>Бонус золота</span><strong id="gold-bonus">0%</strong></div>
-          <div class="mini-card"><span>Убийства</span><strong id="kills">0</strong></div>
-        </div>
-
-        <div class="meta-power panel-lite">
-          <div class="section-head meta-power-head">
-            <h3>Сила перерождения</h3>
-            <p>Вот что уже капает с твоих трофеев и прошлых забегов.</p>
+        <div class="arena-stack">
+          <div class="arena-bars panel-lite">
+            <div class="bar-cluster hidden" id="boss-shield-block">
+              <div class="bar-meta"><span>Щит врага</span><strong id="enemy-shield">0 / 0</strong></div>
+              <div class="shield-bar"><div id="enemy-shield-fill" class="shield-fill"></div></div>
+            </div>
+            <div class="bar-cluster">
+              <div class="bar-meta"><span>HP врага</span><strong id="enemy-hp">0 / 0</strong></div>
+              <div class="hp-bar"><div id="enemy-hp-fill" class="hp-fill"></div></div>
+            </div>
           </div>
-          <div class="meta-power-grid">
-            <div class="mini-card meta-card">
-              <span>Трофеи</span>
-              <strong id="meta-trophies">0</strong>
-            </div>
-            <div class="mini-card meta-card">
-              <span>Сила</span>
-              <strong id="meta-power-bonus">0%</strong>
-            </div>
-            <div class="mini-card meta-card">
-              <span>Золото</span>
-              <strong id="meta-gold-bonus">0%</strong>
-            </div>
-            <div class="mini-card meta-card">
-              <span>Крит урон</span>
-              <strong id="meta-crit-multiplier">x2</strong>
-            </div>
+
+          <div class="enemy-wrap normal" id="enemy-wrap">
+            <div class="enemy-rune rune-a"></div>
+            <div class="enemy-rune rune-b"></div>
+            <div class="enemy-rune-ring"></div>
+            <div id="swipe-trail-layer" class="swipe-trail-layer"></div>
+            <div class="arena-floor-glow"></div>
+            <div class="enemy-glyph" id="enemy-glyph">✦</div>
+            <img id="enemy-image" alt="Враг" class="hidden">
+            <div id="hit-float" class="hit-float hidden"></div>
+            <div id="kill-float" class="kill-float hidden"></div>
           </div>
         </div>
       </section>
 
-      <aside class="side-column">
-        <div class="panel tabs-panel">
-          <div class="tabs-head">
-            <button class="tab-btn active" data-tab="heroes">Герои</button>
-            <button class="tab-btn" data-tab="rituals">Ритуалы</button>
-            <button class="tab-btn" data-tab="top">Топ</button>
-            <button class="tab-btn" data-tab="achievements">Достижения</button>
+      <aside class="command-zone">
+        <section class="panel shaman-hud">
+          <div class="section-topline">
+            <div>
+              <div class="mini-label">Ядро отряда</div>
+              <h3>Верховный шаман</h3>
+            </div>
+            <button id="tap-upgrade-btn" class="primary-btn">Апнуть тап <span id="tap-upgrade-cost">0</span></button>
           </div>
 
-          <section class="tab-section active" data-panel="heroes">
-            <div class="section-head">
-              <h3>Герои стихий</h3>
-              <p>Тут всё по делу: каждый уровень даёт DPS, а на 10 / 25 / 50 / 100 идёт жирный буст.</p>
+          <div class="shaman-core">
+            <div class="shaman-portrait-wrap">
+              <img src="/assets/icons/high_shaman.png" alt="Верховный шаман" class="high-shaman-icon" id="high-shaman-icon">
+              <div id="player-hit-float" class="player-hit-float hidden"></div>
+              <div id="player-heal-float" class="player-heal-float hidden"></div>
             </div>
 
-            <div class="section-head compact-head">
-              <h3>Активные герои сейчас</h3>
-              <p>Здесь показываются только те, кого ты уже нанял.</p>
-            </div>
-            <div id="active-heroes-list" class="stack"></div>
+            <div class="shaman-vitals">
+              <div class="bar-meta"><span>HP</span><strong id="high-shaman-hp">0 / 0</strong></div>
+              <div class="hp-bar"><div id="high-shaman-hp-fill" class="hp-fill"></div></div>
 
-            <div class="section-head compact-head">
-              <h3>Все герои</h3>
-            </div>
-            <div id="heroes-list" class="stack"></div>
-          </section>
+              <div class="bar-meta shield-meta"><span>Щит</span><strong id="high-shaman-shield">0 / 0</strong></div>
+              <div class="shield-bar"><div id="high-shaman-shield-fill" class="shield-fill"></div></div>
 
-          <section class="tab-section" data-panel="rituals">
-            <div class="section-head">
-              <h3>Ритуалы</h3>
-              <p>Ритуалы — это постоянный разгон. Закидываешь золото, получаешь мощь.</p>
+              <div class="shaman-mini-stats">
+                <div class="mini-stat"><span>Tap</span><strong id="tap-damage-inline">0</strong></div>
+                <div class="mini-stat"><span>DPS</span><strong id="dps-inline">0</strong></div>
+                <div class="mini-stat"><span>Crit</span><strong id="crit-inline">0%</strong></div>
+                <div class="mini-stat"><span>Def</span><strong id="high-shaman-defense">0%</strong></div>
+                <div class="mini-stat"><span>Regen</span><strong id="high-shaman-regen">0</strong></div>
+                <div class="mini-stat"><span>Heal</span><strong id="high-shaman-heal-power">0%</strong></div>
+              </div>
             </div>
-            <div id="rituals-list" class="stack"></div>
-          </section>
+          </div>
+        </section>
 
-          <section class="tab-section" data-panel="top">
-            <div class="section-head compact-head">
-              <h3>Топ</h3>
+        <section class="panel combo-hud">
+          <div class="section-topline tight">
+            <div>
+              <div class="mini-label">Активная связка</div>
+              <h3 id="swipe-combo-name">Базовые жесты</h3>
             </div>
-            <div class="top-score-card mini-card">
-              <span>Лучший счёт</span>
-              <strong id="top-best-score">0</strong>
+            <div id="swipe-hint" class="hint-pill">↑ ↓ ← →</div>
+          </div>
+
+          <div class="combo-grid">
+            <div class="combo-card panel-lite">
+              <div class="combo-card-head">
+                <span>Свайп</span>
+                <strong>Комбо</strong>
+              </div>
+              <div class="swipe-meter"><div id="swipe-meter-fill" class="swipe-meter-fill"></div></div>
+              <div id="swipe-combo-text" class="combo-copy">Собери рисунок и вскрой цель.</div>
+              <div id="swipe-history" class="swipe-history"></div>
             </div>
-            <div class="player-meta-card mini-card">
-              <span>Игрок</span>
-              <strong id="player-name">Гость степи</strong>
-              <div class="card-desc" id="player-auth-status">Локальный вход</div>
+
+            <div class="combo-card panel-lite">
+              <div class="combo-card-head">
+                <span id="hold-name">Hold</span>
+                <strong id="hold-last-ms">0 мс</strong>
+              </div>
+              <div class="swipe-meter hold-meter"><div id="hold-meter-fill" class="swipe-meter-fill"></div></div>
+              <div id="hold-text" class="combo-copy">С водой hold бьёт заметно злее.</div>
+              <div class="hold-tags">
+                <span class="tiny-chip">Вода: <strong id="hold-water-state">Выкл</strong></span>
+                <span class="tiny-chip">Земля: <strong id="hold-earth-state">Выкл</strong></span>
+                <span class="tiny-chip" id="hold-hint">Копи и отпускай</span>
+              </div>
             </div>
-            <div class="player-meta-card mini-card">
-              <span>Место в топе</span>
-              <strong id="top-my-rank">—</strong>
+          </div>
+        </section>
+
+        <section class="panel squad-hud">
+          <div class="section-topline tight">
+            <div>
+              <div class="mini-label">Отряд</div>
+              <h3>Круг шаманов</h3>
+            </div>
+          </div>
+          <div id="active-heroes-list" class="active-heroes-dock"></div>
+          <div id="heroes-list" class="heroes-roster"></div>
+        </section>
+
+        <section class="panel meta-hud">
+          <div class="info-strip">
+            <div class="info-card"><span>Крит шанс</span><strong id="crit-chance">0%</strong></div>
+            <div class="info-card"><span>Крит урон</span><strong id="crit-multiplier">x2</strong></div>
+            <div class="info-card"><span>Золото+</span><strong id="gold-bonus">0%</strong></div>
+            <div class="info-card"><span>Киллы</span><strong id="kills">0</strong></div>
+            <div class="info-card"><span>Трофеи</span><strong id="meta-trophies">0</strong></div>
+            <div class="info-card"><span>Сила</span><strong id="meta-power-bonus">0%</strong></div>
+            <div class="info-card"><span>Gold meta</span><strong id="meta-gold-bonus">0%</strong></div>
+            <div class="info-card"><span>Crit meta</span><strong id="meta-crit-multiplier">x2</strong></div>
+          </div>
+        </section>
+
+        <section class="panel side-tabs-panel">
+          <div class="tabs-head">
+            <button class="tab-btn active" data-tab="top">Топ</button>
+            <button class="tab-btn" data-tab="achievements">Достижения</button>
+            <button class="tab-btn" data-tab="rebirth">Перерод</button>
+          </div>
+
+          <section class="tab-section active" data-panel="top">
+            <div class="top-inline-grid">
+              <div class="info-card"><span>Лучший счёт</span><strong id="top-best-score">0</strong></div>
+              <div class="info-card"><span>Мой ранг</span><strong id="top-my-rank">—</strong></div>
+              <div class="info-card stretch"><span>Игрок</span><strong id="player-name">Гость степи</strong><em id="player-auth-status">Локальный вход</em></div>
             </div>
             <div id="leaderboard-list" class="leaderboard-list"></div>
           </section>
 
           <section class="tab-section" data-panel="achievements">
-            <div class="section-head">
-              <h3>Достижения</h3>
-              <p><span id="achievements-summary">0 / 0</span> тем уже закрыто.</p>
+            <div class="tab-header-row">
+              <div class="mini-label">Прогресс</div>
+              <div class="summary-pill" id="achievements-summary">0 / 0</div>
             </div>
             <div id="achievements-list" class="achievements-list"></div>
           </section>
-        </div>
 
-        <section class="panel panel-danger">
-          <div class="section-head">
-            <h3>Перерождение</h3>
-            <p>Скидываешь текущий забег, забираешь трофеи и возвращаешься в степь уже мощнее.</p>
-          </div>
-          <div class="rebirth-meta">
-            <div class="mini-card"><span>Трофеи сейчас</span><strong id="rebirth-gain">0</strong></div>
-            <div class="mini-card"><span>Перерождений</span><strong id="rebirth-count">0</strong></div>
-          </div>
-          <button id="rebirth-btn" class="danger-btn">Уйти в перерод</button>
+          <section class="tab-section" data-panel="rebirth">
+            <div class="top-inline-grid">
+              <div class="info-card"><span>Трофеи за перерод</span><strong id="rebirth-gain">0</strong></div>
+              <div class="info-card"><span>Перерождений</span><strong id="rebirth-count">0</strong></div>
+            </div>
+            <button id="rebirth-btn" class="danger-btn">Уйти в перерод</button>
+          </section>
         </section>
       </aside>
     </main>
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/app.js"></script>
+  <script src="/app.js?v=20260327-hud"></script>
 </body>
 </html>
