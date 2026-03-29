@@ -1289,148 +1289,109 @@ body.wave-transition-open { overflow:hidden; }
 }
 
 
-/* ===== 2026-03-30 desktop alignment hotfix ===== */
-@media (min-width: 861px) {
-  .battle-layout {
-    grid-template-columns: minmax(250px, 290px) minmax(0, 1fr);
-    gap: 14px;
-    align-items: start;
+
+/* === left shaman panel hard fix === */
+.left-column .shaman-hud .section-topline {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 140px !important;
+  align-items: start !important;
+  gap: 12px !important;
+}
+
+.left-column .shaman-hud #tap-upgrade-btn {
+  width: 140px !important;
+  min-height: 74px !important;
+  padding: 8px 10px !important;
+  font-size: 12px !important;
+  line-height: 1.15 !important;
+  text-align: center !important;
+  white-space: normal !important;
+}
+
+.left-column .shaman-core {
+  grid-template-columns: 126px minmax(0, 1fr) !important;
+  gap: 12px !important;
+}
+
+.left-column .shaman-mini-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.left-column .mini-stat {
+  min-width: 0 !important;
+  min-height: 74px !important;
+  padding: 8px 4px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  overflow: hidden !important;
+}
+
+.left-column .mini-stat span {
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 6px !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  letter-spacing: 0.02em !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.left-column .mini-stat strong {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  font-size: 12px !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0 !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+@media (max-width: 1180px) {
+  .left-column .shaman-hud .section-topline {
+    grid-template-columns: minmax(0, 1fr) 128px !important;
   }
 
-  .left-column,
-  .center-column,
-  .mobile-stack {
-    min-width: 0;
+  .left-column .shaman-hud #tap-upgrade-btn {
+    width: 128px !important;
+    min-height: 70px !important;
+    font-size: 11px !important;
   }
 
-  .center-column {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(370px, 410px);
-    gap: 14px;
-    align-items: start;
+  .left-column .mini-stat span {
+    font-size: 8px !important;
   }
 
-  .mobile-stack {
-    position: sticky;
-    top: 100px;
-    align-self: start;
-    gap: 14px;
-  }
-
-  .battle-headline,
-  .battle-headline-tight {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 240px;
-    gap: 12px;
-    align-items: start;
-  }
-
-  .compact-counters {
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .wave-panel {
-    padding: 14px 16px;
-  }
-
-  .wave-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 10px;
-    align-items: stretch;
-  }
-
-  .wave-actions .ghost-btn,
-  .wave-actions .primary-btn {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .enemy-wrap {
-    min-height: 360px;
-    height: clamp(360px, 48vh, 520px);
-  }
-
-  .arena-bars {
-    padding: 10px 12px;
-  }
-
-  .active-squad {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .core-slot {
-    min-height: 92px;
-  }
-
-  .active-slot {
-    grid-template-columns: 54px minmax(0, 1fr) auto;
-    align-items: center;
-  }
-
-  .hero-card {
-    grid-template-columns: 56px minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-  }
-
-  .hero-avatar {
-    width: 56px;
-    height: 56px;
-  }
-
-  .hero-actions {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-width: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    justify-content: stretch;
-  }
-
-  .hero-main-btn,
-  .hero-ghost-btn,
-  .slot-btn {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .slot-copy,
-  .hero-copy {
-    overflow-wrap: anywhere;
-    word-break: break-word;
-  }
-
-  .heroes-roster,
-  .side-tabs-panel .tab-section {
-    max-height: calc(100vh - 180px);
-  }
-
-  .resource-chip strong {
-    font-size: 18px;
-  }
-
-  .counter-box strong,
-  .mini-stat strong,
-  .info-card strong {
-    font-size: 16px;
+  .left-column .mini-stat strong {
+    font-size: 11px !important;
   }
 }
 
-@media (min-width: 861px) and (max-width: 1320px) {
-  .center-column {
-    grid-template-columns: minmax(0, 1fr) 340px;
+@media (max-width: 860px) {
+  .left-column .shaman-hud .section-topline,
+  .mobile-only .section-topline {
+    grid-template-columns: minmax(0, 1fr) 132px !important;
   }
 
-  .battle-headline,
-  .battle-headline-tight {
-    grid-template-columns: 1fr;
+  .left-column .mini-stat strong,
+  .mobile-only .mini-stat strong {
+    font-size: 14px !important;
   }
 
-  .compact-counters {
-    width: 100%;
+  .left-column .mini-stat span,
+  .mobile-only .mini-stat span {
+    font-size: 9px !important;
   }
 }
+
