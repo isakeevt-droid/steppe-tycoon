@@ -10,8 +10,10 @@ def wave_number(stage: int) -> int:
 
 
 def award_gold(state: dict[str, Any], amount: float) -> None:
-    state["gold"] += amount
-    state["lifetime_gold"] = float(state.get("lifetime_gold", 0.0)) + amount
+    wave_bonus = 1.0 + max(0, int(state.get("wave_index", 1)) - 1) * 0.05
+    total_amount = amount * wave_bonus
+    state["gold"] += total_amount
+    state["lifetime_gold"] = float(state.get("lifetime_gold", 0.0)) + total_amount
 
 
 def achievement_catalog() -> list[dict[str, Any]]:
@@ -49,7 +51,7 @@ def achievement_progress_value(state: dict[str, Any], stat: str) -> float:
     if stat == "stage":
         return float(state.get("best_stage", state.get("stage", 1)))
     if stat == "trophies":
-        return float(state.get("trophies", 0))
+        return float(state.get("total_trophies_earned", state.get("trophies", 0)))
     if stat == "rebirths":
         return float(state.get("rebirths", 0))
     if stat == "gold":
@@ -83,7 +85,7 @@ def score_value(state: dict[str, Any], achievements_unlocked: int | None = None)
     unlocked = achievements_unlocked if achievements_unlocked is not None else build_achievements(state)["unlocked"]
     score = (
         int(state.get("best_stage", 1)) * 25
-        + int(state.get("trophies", 0)) * 1000
+        + int(state.get("total_trophies_earned", state.get("trophies", 0))) * 1000
         + int(state.get("lifetime_boss_kills", 0)) * 100
         + unlocked * 50
     )
@@ -99,13 +101,53 @@ def update_records(state: dict[str, Any]) -> None:
     state["best_score"] = max(int(state.get("best_score", 0)), score_value(state))
 
 def tap_upgrade_cost(state: dict[str, Any]) -> float:
-    return 12 * (1.33 ** max(0, state["tap_level"] - 1))
+    return 18 * (1.18 ** max(0, state["tap_level"] - 1))
 
 
-def rebirth_reward(state: dict[str, Any]) -> int:
+
+
+def blessing_cost(level: int) -> int:
+    return int(3 + max(0, level) ** 2 + max(0, level) * 2)
+
+
+def rebirth_reward_breakdown(state: dict[str, Any]) -> dict[str, int]:
     stage = int(state.get("stage", 1))
     bosses = int(state.get("boss_kills", 0))
-    return max(0, (stage - 1) // 10 + bosses)
+    wave = wave_number(stage)
+    stage_needed = max(0, 25 - stage)
+    if stage < 25:
+        return {
+            "depth": 0,
+            "boss": bosses,
+            "wave": 0,
+            "elite": 0,
+            "stage_needed": stage_needed,
+            "total": 0,
+        }
+
+    depth = max(1, int(((stage - 20) / 10) ** 1.6))
+    boss_bonus = bosses
+    wave_bonus = max(0, wave - 2)
+    elite_bonus = max(0, stage // 15)
+    total = max(1, depth + boss_bonus + wave_bonus + elite_bonus)
+    best_stage = max(1, int(state.get("best_stage", stage)))
+    run_ratio = stage / best_stage
+    if run_ratio < 0.6:
+        total = max(1, int(total * 0.5))
+    elif run_ratio < 0.85:
+        total = max(1, int(total * 0.75))
+
+    return {
+        "depth": depth,
+        "boss": boss_bonus,
+        "wave": wave_bonus,
+        "elite": elite_bonus,
+        "stage_needed": 0,
+        "total": total,
+    }
+
+def rebirth_reward(state: dict[str, Any]) -> int:
+    return int(rebirth_reward_breakdown(state)["total"])
 
 def push_top_run(state: dict[str, Any], reward: int, achievements_unlocked: int) -> None:
     run = {

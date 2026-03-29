@@ -5,6 +5,8 @@ from typing import Any
 
 from .content import BREAKPOINTS, HEROES, HERO_MILESTONES, HERO_UNLOCK_COST, HOLD_MAX_MS, HOLD_MIN_MS, RITUALS
 
+BLESSING_PATHS = ("fire", "water", "earth", "air")
+
 def hero_level(state: dict[str, Any], hero_id: str) -> int:
     return int(state["heroes"].get(hero_id, 0))
 
@@ -13,11 +15,34 @@ def ritual_level(state: dict[str, Any], ritual_id: str) -> int:
     return int(state["rituals"].get(ritual_id, 0))
 
 
+
+
+def blessing_level(state: dict[str, Any], path: str) -> int:
+    blessings = state.get("blessings", {})
+    if not isinstance(blessings, dict):
+        return 0
+    return int(blessings.get(path, 0))
+
+
+def total_blessing_levels(state: dict[str, Any]) -> int:
+    return sum(blessing_level(state, path) for path in BLESSING_PATHS)
+
+
+def blessing_synergies(state: dict[str, Any]) -> dict[str, float]:
+    fire = blessing_level(state, "fire")
+    water = blessing_level(state, "water")
+    earth = blessing_level(state, "earth")
+    air = blessing_level(state, "air")
+    return {
+        "fire_air": min(fire, air) * 0.08,
+        "fire_earth": min(fire, earth) * 0.07,
+        "water_earth": min(water, earth) * 0.07,
+    }
+
 def hero_cost(hero_id: str, level: int) -> float:
     hero = next(item for item in HEROES if item["id"] == hero_id)
-    if level <= 0:
-        return float(HERO_UNLOCK_COST)
-    return hero["base_cost"] * (float(hero.get("growth", 1.16)) ** max(0, level - 1))
+    growth = float(hero.get("growth", 1.07))
+    return float(hero["base_cost"]) * (growth ** max(0, level))
 
 
 def ritual_cost(ritual_id: str, level: int) -> float:
@@ -26,7 +51,8 @@ def ritual_cost(ritual_id: str, level: int) -> float:
 
 
 def trophy_power_multiplier(state: dict[str, Any]) -> float:
-    return 1 + int(state.get("trophies", 0)) * 0.12
+    levels = total_blessing_levels(state)
+    return 1.0 + levels * 0.05 + max(0, levels - 4) * 0.015
 
 
 def hero_breakpoint_count(level: int) -> int:
@@ -65,9 +91,21 @@ def hero_personal_dps(hero_id: str, level: int) -> float:
     if level <= 0:
         return 0.0
     hero = next(item for item in HEROES if item["id"] == hero_id)
-    dps = hero["base_dps"] * level * (hero["growth"] ** max(0, level - 1))
-    dps *= 2 ** hero_milestone_bonus_count(level)
-    return dps
+    growth = float(hero.get("growth", 1.07))
+    dps = float(hero["base_dps"]) * level * (growth ** max(0, level - 1))
+
+    milestone_mult = 1.0
+    for point in BREAKPOINTS:
+        if level >= point:
+            if point == 10:
+                milestone_mult *= 1.75
+            elif point == 25:
+                milestone_mult *= 2.0
+            elif point == 50:
+                milestone_mult *= 2.5
+            elif point == 100:
+                milestone_mult *= 4.0
+    return dps * milestone_mult * 0.72
 
 
 def active_hero_ids(state: dict[str, Any]) -> list[str]:
@@ -88,63 +126,63 @@ def air_aura_multiplier(state: dict[str, Any]) -> float:
     level = hero_level(state, "air")
     if level <= 0:
         return 1.0
-    return 1.0 + level * 0.015 + hero_breakpoint_count(level) * 0.15
+    return 1.0 + level * 0.004 + hero_breakpoint_count(level) * 0.05 + blessing_level(state, "air") * 0.03
 
 
 def fire_tap_bonus(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "fire"):
         return 0.0
     level = hero_level(state, "fire")
-    return level * 0.03 + hero_breakpoint_count(level) * 0.20
+    return level * 0.007 + hero_breakpoint_count(level) * 0.05 + blessing_level(state, "fire") * 0.035
 
 
 def water_gold_bonus(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "water"):
         return 0.0
     level = hero_level(state, "water")
-    return level * 0.02 + hero_breakpoint_count(level) * 0.10
+    return level * 0.006 + hero_breakpoint_count(level) * 0.04
 
 
 def earth_boss_bonus(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "earth"):
         return 0.0
     level = hero_level(state, "earth")
-    return level * 0.03 + hero_breakpoint_count(level) * 0.35
+    return level * 0.006 + hero_breakpoint_count(level) * 0.07 + blessing_level(state, "earth") * 0.03
 
 
 def earth_crit_bonus(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "earth"):
         return 0.0
     level = hero_level(state, "earth")
-    return level * 0.002 + hero_breakpoint_count(level) * 0.01
+    return level * 0.00045 + hero_breakpoint_count(level) * 0.004
 
 
 def fire_bonus_crit_chance(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "fire"):
         return 0.0
     level = hero_level(state, "fire")
-    return 0.015 * hero_breakpoint_count(level) + level * 0.001
+    return 0.006 * hero_breakpoint_count(level) + level * 0.00025 + blessing_level(state, "fire") * 0.0025
 
 
 def fire_bonus_crit_multiplier(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "fire"):
         return 0.0
     level = hero_level(state, "fire")
-    return level * 0.01 + hero_breakpoint_count(level) * 0.12
+    return level * 0.002 + hero_breakpoint_count(level) * 0.04 + blessing_level(state, "fire") * 0.025
 
 
 def earth_armor_break_multiplier(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "earth"):
         return 1.0
     level = hero_level(state, "earth")
-    return 1.0 + level * 0.02 + hero_breakpoint_count(level) * 0.22
+    return 1.0 + level * 0.007 + hero_breakpoint_count(level) * 0.05 + blessing_level(state, "earth") * 0.035
 
 
 def water_hold_multiplier(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "water"):
         return 1.0
     level = hero_level(state, "water")
-    return 1.0 + level * 0.03 + hero_breakpoint_count(level) * 0.24
+    return 1.0 + level * 0.008 + hero_breakpoint_count(level) * 0.05 + blessing_level(state, "water") * 0.04
 
 
 def total_hero_dps(state: dict[str, Any]) -> float:
@@ -152,8 +190,10 @@ def total_hero_dps(state: dict[str, Any]) -> float:
 
     total = sum(hero_personal_dps(hero["id"], hero_level(state, hero["id"])) for hero in HEROES if is_hero_active(state, hero["id"]))
     total *= air_aura_multiplier(state)
-    total *= 1 + 0.25 * ritual_level(state, "storm")
+    total *= 1 + min(0.18, max(0, int(state.get("stage", 1)) - 1) * 0.0025)
+    total *= 1 + 0.08 * ritual_level(state, "storm")
     total *= trophy_power_multiplier(state)
+    total *= 1 + blessing_synergies(state)["fire_air"] * 0.35
     if state["enemy"].get("type") in {"boss", "elite"}:
         total *= 1 + earth_boss_bonus(state)
     preview_damage, info = damage_after_enemy_mechanics(state, total, "dps", consume=False)
@@ -164,25 +204,27 @@ def total_hero_dps(state: dict[str, Any]) -> float:
 
 def base_tap_damage(state: dict[str, Any]) -> float:
     embers = ritual_level(state, "embers")
-    base = 1.0 + (state["tap_level"] - 1) * 1.4
+    base = 1.4 + (state["tap_level"] - 1) * 1.2
     base *= 1 + fire_tap_bonus(state)
-    base *= 1 + embers * 0.25
+    base *= 1 + embers * 0.08
     base *= trophy_power_multiplier(state)
+    base *= 1 + blessing_synergies(state)["fire_air"] * 0.25
     if state["enemy"].get("type") in {"boss", "elite"}:
         base *= 1 + earth_boss_bonus(state) * 0.5
+    base *= 0.78
     return round(base, 2)
 
 
 def crit_chance(state: dict[str, Any]) -> float:
     if state["enemy"].get("type") == "boss" and state["enemy"].get("mechanic") == "anti_crit":
         return 0.0
-    chance = 0.05 + earth_crit_bonus(state) + fire_bonus_crit_chance(state) + ritual_level(state, "stone") * 0.02
-    return min(chance, 0.65)
+    chance = 0.03 + earth_crit_bonus(state) + fire_bonus_crit_chance(state) + ritual_level(state, "stone") * 0.007
+    return min(chance, 0.35)
 
 
 def crit_multiplier(state: dict[str, Any]) -> float:
     earth = hero_level(state, "earth") if is_hero_active(state, "earth") else 0
-    return 2.0 + earth * 0.02 + fire_bonus_crit_multiplier(state) + int(state.get("trophies", 0)) * 0.01
+    return 1.6 + earth * 0.006 + fire_bonus_crit_multiplier(state)
 
 
 def tap_damage(state: dict[str, Any]) -> float:
@@ -197,7 +239,7 @@ def tap_damage(state: dict[str, Any]) -> float:
 
 def gold_multiplier(state: dict[str, Any]) -> float:
     tide = ritual_level(state, "tide")
-    return 1 + water_gold_bonus(state) + tide * 0.20 + int(state.get("trophies", 0)) * 0.015
+    return 1 + water_gold_bonus(state) + tide * 0.1
 
 def fmt_stat(value: float) -> str:
     value = float(value)
@@ -225,10 +267,12 @@ def hero_passive_text(state: dict[str, Any], hero_id: str) -> str:
 
 
 def hero_next_bonus_text(hero_id: str, level: int) -> str:
-    nxt = next_breakpoint(level)
+    milestones = HERO_MILESTONES.get(hero_id, {})
+    sorted_points = sorted(milestones)
+    nxt = next((point for point in sorted_points if level < point), None)
     if nxt is None:
         return "Все milestones открыты: шаман уже в эндгейме."
-    return f"Следующий milestone: {nxt} лвл → {HERO_MILESTONES[hero_id][nxt]}"
+    return f"Следующий milestone: {nxt} лвл → {milestones[nxt]}"
 
 
 def active_pair_key(state: dict[str, Any]) -> str:

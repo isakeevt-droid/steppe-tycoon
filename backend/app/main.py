@@ -8,15 +8,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .combat import apply_burn, apply_damage, advance_state, elemental_visual_for_state, hold_damage_value, register_swipe_combo, swipe_damage_value
+from .combat import apply_burn, apply_damage, advance_state, apply_swipe_combo_effect, can_fight, elemental_visual_for_state, hold_damage_value, register_swipe_combo, start_wave, stop_expedition, swipe_damage_value
 from .content import ASSETS_DIR, FRONTEND_DIR, HOLD_MAX_MS, HOLD_MIN_MS
 from .heroes import active_hero_ids, active_pair_key, base_tap_damage, crit_chance, crit_multiplier, hero_cost, hero_level, is_hero_active, ritual_cost, ritual_level, tap_damage, total_hero_dps
-from .models import BuyRequest, HoldRequest, PlayerIdentity, SwipeRequest
+from .models import BuyRequest, HoldRequest, PlayerIdentity, RebirthRequest, SwipeRequest
 from .payloads import build_payload
 from .player import apply_heal_to_player, apply_shield_to_player
-from .progression import build_achievements, push_top_run, rebirth_reward, score_value, tap_upgrade_cost, wave_number
-from .storage import fetch_leaderboard, get_identity, get_player_lock, init_db, load_player_state, save_player_state
+from .progression import blessing_cost, build_achievements, push_top_run, rebirth_reward, rebirth_reward_breakdown, score_value, tap_upgrade_cost, wave_number
 from .state import default_state
+from .storage import fetch_leaderboard, get_identity, get_player_lock, init_db, load_player_state, save_player_state
 
 app = FastAPI(title="Steppe Shaman")
 app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
@@ -49,14 +49,18 @@ def tap_enemy(request: Request) -> JSONResponse:
     with get_player_lock(identity.player_id):
         state = load_player_state(identity)
         advance_state(state)
+        if not can_fight(state):
+            save_player_state(identity, state)
+            return JSONResponse(build_payload(state, identity, {"blocked": True, "blocked_reason": "wave_paused"}))
         raw_damage = base_tap_damage(state)
         crit = random.random() < crit_chance(state)
         if crit:
             raw_damage *= crit_multiplier(state)
         raw_damage = round(raw_damage, 2)
         hit_result = apply_damage(state, raw_damage, source="tap", source_meta={"pair_key": active_pair_key(state)})
-        if crit:
-            apply_burn(state, raw_damage, "tap")
+        if is_hero_active(state, "fire"):
+            burn_damage = raw_damage * (1.85 if crit else 1.0)
+            apply_burn(state, round(burn_damage, 2), "tap")
         hit_result["damage"] = raw_damage
         hit_result["crit"] = crit
         hit_result["source"] = "tap"
@@ -77,7 +81,11 @@ def swipe_enemy(request: Request, req: SwipeRequest) -> JSONResponse:
     with get_player_lock(identity.player_id):
         state = load_player_state(identity)
         advance_state(state)
+        if not can_fight(state):
+            save_player_state(identity, state)
+            return JSONResponse(build_payload(state, identity, {"blocked": True, "blocked_reason": "wave_paused"}))
         combo_key, history, combo, pair_key = register_swipe_combo(state, direction)
+        combo_proc = apply_swipe_combo_effect(state, combo_key, combo, pair_key)
         raw_damage, armor_mult = swipe_damage_value(state, direction, combo)
         hit_result = apply_damage(state, raw_damage, source="swipe", source_meta={"pair_key": pair_key, "combo_key": combo_key, "direction": direction})
         if is_hero_active(state, "fire") and (combo is not None or direction in {"up", "right"}):
@@ -90,6 +98,9 @@ def swipe_enemy(request: Request, req: SwipeRequest) -> JSONResponse:
         hit_result["combo_key"] = combo_key
         hit_result["combo_name"] = combo.get("name") if combo else None
         hit_result["combo_effect"] = combo.get("effect") if combo else None
+        if combo_proc.get("combo_proc_text"):
+            base_effect = hit_result["combo_effect"] or ""
+            hit_result["combo_effect"] = f"{base_effect} {combo_proc['combo_proc_text']}".strip()
         hit_result["combo_visual"] = combo.get("visual") if combo else elemental_visual_for_state(state, "swipe")
         hit_result["visual"] = hit_result["combo_visual"]
         hit_result["pair_key"] = pair_key
@@ -104,6 +115,9 @@ def hold_enemy(request: Request, req: HoldRequest) -> JSONResponse:
     with get_player_lock(identity.player_id):
         state = load_player_state(identity)
         advance_state(state)
+        if not can_fight(state):
+            save_player_state(identity, state)
+            return JSONResponse(build_payload(state, identity, {"blocked": True, "blocked_reason": "wave_paused"}))
         duration_ms = max(HOLD_MIN_MS, min(HOLD_MAX_MS, int(req.duration_ms)))
         raw_damage, meta = hold_damage_value(state, duration_ms)
         hit_result = apply_damage(state, raw_damage, source="hold", source_meta={"pair_key": meta["pair_key"], "hold_ms": duration_ms})
@@ -132,6 +146,17 @@ def hold_enemy(request: Request, req: HoldRequest) -> JSONResponse:
         return JSONResponse(build_payload(state, identity, hit_result))
 
 
+@app.post("/api/start-wave")
+def start_wave_route(request: Request) -> JSONResponse:
+    identity = get_identity(request)
+    with get_player_lock(identity.player_id):
+        state = load_player_state(identity)
+        advance_state(state)
+        start_result = start_wave(state)
+        save_player_state(identity, state)
+        return JSONResponse(build_payload(state, identity, start_result))
+
+
 @app.post("/api/buy-hero")
 def buy_hero(request: Request, req: BuyRequest) -> JSONResponse:
     identity = get_identity(request)
@@ -140,6 +165,8 @@ def buy_hero(request: Request, req: BuyRequest) -> JSONResponse:
         advance_state(state)
         if req.id not in state["heroes"]:
             return JSONResponse({"error": "unknown_hero"}, status_code=400)
+        if can_fight(state):
+            return JSONResponse({"error": "wave_locked"}, status_code=400)
         cost = hero_cost(req.id, hero_level(state, req.id))
         if state["gold"] < cost:
             return JSONResponse({"error": "not_enough_gold"}, status_code=400)
@@ -171,8 +198,9 @@ def buy_ritual(request: Request, req: BuyRequest) -> JSONResponse:
 
 @app.post("/api/toggle-active-hero")
 def toggle_active_hero(request: Request, req: BuyRequest) -> JSONResponse:
-    identity, state = with_player_state(request)
+    identity = get_identity(request)
     with get_player_lock(identity.player_id):
+        state = load_player_state(identity)
         advance_state(state)
         if req.id not in state["heroes"]:
             return JSONResponse({"error": "unknown_hero"}, status_code=400)
@@ -187,6 +215,17 @@ def toggle_active_hero(request: Request, req: BuyRequest) -> JSONResponse:
             state["active_heroes"] = active_ids + [req.id]
         save_player_state(identity, state)
         return JSONResponse(build_payload(state, identity))
+
+
+@app.post("/api/stop-expedition")
+def stop_expedition_action(request: Request) -> JSONResponse:
+    identity = get_identity(request)
+    with get_player_lock(identity.player_id):
+        state = load_player_state(identity)
+        advance_state(state)
+        result = stop_expedition(state)
+        save_player_state(identity, state)
+        return JSONResponse(build_payload(state, identity, result))
 
 
 @app.post("/api/upgrade-tap")
@@ -205,7 +244,7 @@ def upgrade_tap(request: Request) -> JSONResponse:
 
 
 @app.post("/api/rebirth")
-def rebirth(request: Request) -> JSONResponse:
+def rebirth(request: Request, req: RebirthRequest) -> JSONResponse:
     identity = get_identity(request)
     with get_player_lock(identity.player_id):
         state = load_player_state(identity)
@@ -213,9 +252,22 @@ def rebirth(request: Request) -> JSONResponse:
         reward = rebirth_reward(state)
         if reward <= 0:
             return JSONResponse({"error": "rebirth_locked"}, status_code=400)
+        if req.path not in {"fire", "water", "earth", "air"}:
+            return JSONResponse({"error": "bad_rebirth_path"}, status_code=400)
+
         achievements = build_achievements(state)
         push_top_run(state, reward, achievements["unlocked"])
-        trophies = int(state.get("trophies", 0)) + reward
+        reward_breakdown = rebirth_reward_breakdown(state)
+        total_trophies = int(state.get("trophies", 0)) + reward
+        total_trophies_earned = int(state.get("total_trophies_earned", state.get("trophies", 0))) + reward
+        blessings_before = dict(state.get("blessings", {})) if isinstance(state.get("blessings"), dict) else {"fire": 0, "water": 0, "earth": 0, "air": 0}
+        level_before = int(blessings_before.get(req.path, 0))
+        cost = blessing_cost(level_before)
+        invested = total_trophies >= cost
+        trophies_left = total_trophies - cost if invested else total_trophies
+        if invested:
+            blessings_before[req.path] = level_before + 1
+
         rebirths = int(state.get("rebirths", 0)) + 1
         best_stage = max(int(state.get("best_stage", 1)), int(state.get("stage", 1)))
         best_wave = max(int(state.get("best_wave", 1)), wave_number(int(state.get("stage", 1))))
@@ -228,8 +280,10 @@ def rebirth(request: Request) -> JSONResponse:
         top_runs = list(state.get("top_runs", []))
 
         state = default_state()
-        state["trophies"] = trophies
+        state["trophies"] = trophies_left
         state["rebirths"] = rebirths
+        state["total_trophies_earned"] = total_trophies_earned
+        state["blessings"] = blessings_before
         state["best_stage"] = best_stage
         state["best_wave"] = best_wave
         state["best_tap"] = best_tap
@@ -239,6 +293,14 @@ def rebirth(request: Request) -> JSONResponse:
         state["lifetime_kills"] = lifetime_kills
         state["lifetime_boss_kills"] = lifetime_boss_kills
         state["top_runs"] = top_runs
+        state["last_rebirth_summary"] = {
+            "path": req.path,
+            "reward": reward,
+            "cost": cost,
+            "invested": invested,
+            "trophies_left": trophies_left,
+            "breakdown": reward_breakdown,
+        }
 
         save_player_state(identity, state)
         return JSONResponse(build_payload(state, identity))

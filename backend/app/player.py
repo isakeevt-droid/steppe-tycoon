@@ -4,34 +4,34 @@ import time
 from typing import Any
 
 from .enemies import boss_shadow_active, generate_enemy
-from .heroes import hero_level, is_hero_active, pair_has_earth, trophy_power_multiplier
+from .heroes import blessing_level, hero_breakpoint_count, hero_level, is_hero_active, pair_has_earth, trophy_power_multiplier
 
 def player_max_hp_value(state: dict[str, Any]) -> float:
-    base = 130.0 + max(0, int(state.get("stage", 1)) - 1) * 14.0
-    base += max(0, int(state.get("tap_level", 1)) - 1) * 9.0
-    base *= 1 + int(state.get("rebirths", 0)) * 0.12 + int(state.get("trophies", 0)) * 0.025
+    base = 150.0 + max(0, int(state.get("stage", 1)) - 1) * 16.0
+    base += max(0, int(state.get("tap_level", 1)) - 1) * 10.0
+    base *= 1 + int(state.get("rebirths", 0)) * 0.12 + blessing_level(state, "earth") * 0.05 + blessing_level(state, "water") * 0.03
     if is_hero_active(state, "water"):
         level = hero_level(state, "water")
-        base *= 1 + level * 0.01 + hero_breakpoint_count(level) * 0.06
+        base *= 1 + level * 0.012 + hero_breakpoint_count(level) * 0.07
     if is_hero_active(state, "earth"):
         level = hero_level(state, "earth")
-        base *= 1 + level * 0.012 + hero_breakpoint_count(level) * 0.08
+        base *= 1 + level * 0.014 + hero_breakpoint_count(level) * 0.09
     return round(base, 2)
 
 
 def player_defense_value(state: dict[str, Any]) -> float:
-    defense = 0.05 + int(state.get("rebirths", 0)) * 0.01 + int(state.get("trophies", 0)) * 0.002
+    defense = 0.08 + int(state.get("rebirths", 0)) * 0.01 + blessing_level(state, "earth") * 0.01
     if is_hero_active(state, "earth"):
         level = hero_level(state, "earth")
-        defense += level * 0.006 + hero_breakpoint_count(level) * 0.03
-    return round(min(defense, 0.72), 4)
+        defense += level * 0.0065 + hero_breakpoint_count(level) * 0.032
+    return round(min(defense, 0.74), 4)
 
 
 def player_regen_value(state: dict[str, Any]) -> float:
-    regen = player_max_hp_value(state) * 0.01 + int(state.get("rebirths", 0)) * 0.8
+    regen = player_max_hp_value(state) * 0.0125 + int(state.get("rebirths", 0)) * 0.95 + blessing_level(state, "water") * 1.4
     if is_hero_active(state, "water"):
         level = hero_level(state, "water")
-        regen += 2.2 + level * 0.9 + hero_breakpoint_count(level) * 5.5
+        regen += 2.8 + level * 1.0 + hero_breakpoint_count(level) * 5.8
     return round(regen, 2)
 
 
@@ -39,7 +39,7 @@ def player_heal_power_value(state: dict[str, Any]) -> float:
     heal = 1.0
     if is_hero_active(state, "water"):
         level = hero_level(state, "water")
-        heal += level * 0.03 + hero_breakpoint_count(level) * 0.18
+        heal += level * 0.032 + hero_breakpoint_count(level) * 0.2 + blessing_level(state, "water") * 0.04
     return round(heal, 2)
 
 
@@ -47,8 +47,8 @@ def player_max_shield_value(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "earth"):
         return 0.0
     level = hero_level(state, "earth")
-    base = player_max_hp_value(state) * 0.18
-    base += level * 16.0 + hero_breakpoint_count(level) * 32.0
+    base = player_max_hp_value(state) * 0.2
+    base += level * 18.0 + hero_breakpoint_count(level) * 36.0
     return round(base, 2)
 
 
@@ -56,7 +56,7 @@ def player_shield_regen_value(state: dict[str, Any]) -> float:
     if not is_hero_active(state, "earth"):
         return 0.0
     level = hero_level(state, "earth")
-    return round(1.5 + level * 0.45 + hero_breakpoint_count(level) * 2.6, 2)
+    return round(1.8 + level * 0.5 + hero_breakpoint_count(level) * 2.8, 2)
 
 
 def sync_player_combat_stats(state: dict[str, Any], refill: bool = False) -> None:
@@ -142,7 +142,9 @@ def apply_damage_to_player(state: dict[str, Any], damage: float, attack_kind: st
 def reset_after_player_defeat(state: dict[str, Any]) -> None:
     state["player_downs"] = int(state.get("player_downs", 0)) + 1
     stage = int(state.get("stage", 1))
-    state["enemy"] = generate_enemy(stage)
+    state["last_enemy_id"] = state.get("enemy", {}).get("id")
+    state["enemy"] = generate_enemy(stage, state.get("last_enemy_id"))
+    state["last_enemy_id"] = state["enemy"].get("id")
     sync_player_combat_stats(state, refill=True)
     state["player_shield"] = round(float(state.get("player_max_shield", 0.0)) * 0.4, 2)
 

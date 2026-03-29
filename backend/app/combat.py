@@ -4,18 +4,29 @@ import time
 from typing import Any
 
 from .content import HOLD_BASE_TICKS, HOLD_MAX_MS, HOLD_MIN_MS, MAX_KILLS_PER_TICK, MAX_OFFLINE_PROGRESS_SECONDS
-from .enemies import boss_shadow_active, damage_after_enemy_mechanics, enemy_phase_name, enemy_status_text, generate_enemy
+from .enemies import (
+    boss_shadow_active,
+    damage_after_enemy_mechanics,
+    enemy_phase_name,
+    enemy_status_text,
+    generate_enemy,
+    stage_kill_target,
+    wave_hint_text,
+    wave_location_text,
+    wave_recommended_pairs,
+    wave_size_for_index,
+    wave_theme_for_index,
+    wave_slot_kind,
+)
 from .heroes import (
     active_hero_ids,
     active_pair_key,
     base_tap_damage,
-    build_active_heroes,
     earth_armor_break_multiplier,
     gold_multiplier,
     hero_breakpoint_count,
     hero_level,
     is_hero_active,
-    pair_has_earth,
     total_hero_dps,
     water_hold_multiplier,
 )
@@ -26,11 +37,158 @@ from .player import (
     player_heal_power_value,
     player_max_hp_value,
     player_max_shield_value,
-    process_player_regen,
     reset_after_player_defeat,
     sync_player_combat_stats,
 )
 from .progression import award_gold, update_records
+
+
+def refresh_enemy_temporary_effects(state: dict[str, Any]) -> None:
+    enemy = state["enemy"]
+    now = time.time()
+    if float(enemy.get("slow_until", 0.0)) > now:
+        enemy["attack_speed_mult"] = float(enemy.get("slow_mult", 1.0))
+    else:
+        enemy["attack_speed_mult"] = 1.0
+        enemy["slow_until"] = 0.0
+        enemy["slow_mult"] = 1.0
+    if float(enemy.get("combo_vuln_until", 0.0)) <= now:
+        enemy["combo_vuln_until"] = 0.0
+        enemy["combo_vuln_mult"] = 1.0
+    if float(enemy.get("armor_exposed_until", 0.0)) <= now:
+        enemy["armor_exposed_until"] = 0.0
+        enemy["armor_exposed_mult"] = 1.0
+    if float(enemy.get("gold_window_until", 0.0)) <= now:
+        enemy["gold_window_until"] = 0.0
+        enemy["gold_window_mult"] = 1.0
+
+
+def can_fight(state: dict[str, Any]) -> bool:
+    return bool(state.get("wave_in_progress")) and not bool(state.get("wave_waiting"))
+
+
+def prepare_next_wave_preview(state: dict[str, Any]) -> None:
+    wave_index = max(1, int(state.get("wave_index", 1)))
+    theme = wave_theme_for_index(wave_index)
+    state["wave_theme_id"] = theme["id"]
+    state["wave_location"] = wave_location_text(wave_index)
+    state["wave_hint"] = wave_hint_text(wave_index)
+    state["wave_recommended_pairs"] = wave_recommended_pairs(wave_index)
+    preview_size = wave_size_for_index(wave_index)
+    preview_enemy = generate_enemy(
+        int(state.get("stage", 1)),
+        state.get("last_enemy_id"),
+        wave_theme_id=theme["id"],
+        forced_kind=wave_slot_kind(preview_size, 1),
+        wave_slot=1,
+        wave_size=preview_size,
+    )
+    state["enemy"] = preview_enemy
+    state["last_enemy_id"] = preview_enemy.get("id")
+
+
+def start_wave(state: dict[str, Any]) -> dict[str, Any]:
+    if can_fight(state):
+        return {"wave_started": False, "wave_locked": True}
+    wave_index = max(1, int(state.get("wave_index", 1)))
+    wave_size = wave_size_for_index(wave_index)
+    theme = wave_theme_for_index(wave_index)
+    state["wave_size"] = wave_size
+    state["wave_progress"] = 0
+    state["wave_in_progress"] = True
+    state["wave_waiting"] = False
+    state["swipe_history"] = []
+    state["wave_theme_id"] = theme["id"]
+    state["wave_location"] = wave_location_text(wave_index)
+    state["wave_hint"] = wave_hint_text(wave_index)
+    state["wave_recommended_pairs"] = wave_recommended_pairs(wave_index)
+    first_enemy = generate_enemy(
+        int(state.get("stage", 1)),
+        state.get("last_enemy_id"),
+        wave_theme_id=theme["id"],
+        forced_kind=wave_slot_kind(wave_size, 1),
+        wave_slot=1,
+        wave_size=wave_size,
+    )
+    state["enemy"] = first_enemy
+    state["last_enemy_id"] = first_enemy.get("id")
+    return {"wave_started": True, "wave_locked": False, "wave_size": wave_size}
+
+
+def stop_expedition(state: dict[str, Any]) -> dict[str, Any]:
+    was_active = bool(state.get("wave_in_progress")) and not bool(state.get("wave_waiting"))
+    stopped_wave = max(1, int(state.get("wave_index", 1)))
+    cleared = int(state.get("wave_progress", 0))
+    state["wave_in_progress"] = False
+    state["wave_waiting"] = True
+    state["wave_progress"] = 0
+    state["wave_size"] = 0
+    state["swipe_history"] = []
+    prepare_next_wave_preview(state)
+    update_records(state)
+    return {
+        "expedition_stopped": True,
+        "stopped_wave": stopped_wave,
+        "stopped_progress": cleared,
+        "stopped_mid_wave": was_active,
+    }
+
+
+def apply_swipe_combo_effect(state: dict[str, Any], combo_key: str, combo: dict[str, Any] | None, pair_key: str) -> dict[str, Any]:
+    enemy = state["enemy"]
+    refresh_enemy_temporary_effects(state)
+    if not combo or not combo_key:
+        return {"combo_proc": False, "combo_proc_text": ""}
+
+    now = time.time()
+    vuln_until = 0.0
+    vuln_mult = 1.0
+    proc_text = ""
+
+    if combo_key == "RR":
+        vuln_until = now + 1.8
+        vuln_mult = 1.06
+        proc_text = "Рывок расшатал цель. Короткое окно на добивание."
+    elif combo_key == "UU":
+        vuln_until = now + 2.0
+        vuln_mult = 1.08
+        proc_text = "Подброс вскрыл стойку. Следующий прокаст залетает сочнее."
+    elif combo_key == "LL":
+        enemy["slow_until"] = max(float(enemy.get("slow_until", 0.0)), now + 2.8)
+        enemy["slow_mult"] = min(float(enemy.get("slow_mult", 1.0)), 0.76)
+        proc_text = "Боковой срез сбил темп врага. Он бьёт медленнее."
+    elif combo_key == "DD":
+        vuln_until = now + 2.2
+        vuln_mult = 1.1
+        enemy["shatter_until"] = max(float(enemy.get("shatter_until", 0.0)), now + 2.4)
+        proc_text = "Тяжёлый удар вниз раскалывает стойку и крошит броню."
+    elif combo_key == "RRUU":
+        vuln_until = now + 3.2
+        vuln_mult = 1.14
+        enemy["slow_until"] = max(float(enemy.get("slow_until", 0.0)), now + 2.2)
+        enemy["slow_mult"] = min(float(enemy.get("slow_mult", 1.0)), 0.82)
+        enemy["shatter_until"] = max(float(enemy.get("shatter_until", 0.0)), now + 3.0)
+        proc_text = "Длинная связка вскрыла цель по полной. Есть окно на жёсткий разнос."
+
+    if "air" in pair_key and combo_key in {"RR", "RRUU"}:
+        enemy["slow_until"] = max(float(enemy.get("slow_until", 0.0)), now + 3.1)
+        enemy["slow_mult"] = min(float(enemy.get("slow_mult", 1.0)), 0.72)
+    if "earth" in pair_key and combo_key in {"DD", "RRUU"}:
+        enemy["shatter_until"] = max(float(enemy.get("shatter_until", 0.0)), now + 3.6)
+    if "water" in pair_key and combo_key in {"LL", "RRUU"}:
+        vuln_until = max(vuln_until, now + 2.8)
+        vuln_mult = max(vuln_mult, 1.14)
+    if "fire" in pair_key and combo_key in {"UU", "RRUU"}:
+        vuln_until = max(vuln_until, now + 2.4)
+        vuln_mult = max(vuln_mult, 1.16)
+
+    if vuln_until > now:
+        enemy["combo_vuln_until"] = max(float(enemy.get("combo_vuln_until", 0.0)), vuln_until)
+        enemy["combo_vuln_mult"] = max(float(enemy.get("combo_vuln_mult", 1.0)), vuln_mult)
+
+    refresh_enemy_temporary_effects(state)
+    return {"combo_proc": True, "combo_proc_text": proc_text}
+
 
 def apply_burn(state: dict[str, Any], source_damage: float, source: str) -> None:
     if not is_hero_active(state, "fire"):
@@ -50,7 +208,7 @@ def apply_burn(state: dict[str, Any], source_damage: float, source: str) -> None
     if milestone_count >= 4:
         stacks += 1
     enemy["burn_stacks"] = min(6, int(enemy.get("burn_stacks", 0)) + stacks)
-    base_power = source_damage * (0.10 + milestone_count * 0.035)
+    base_power = source_damage * (0.045 + milestone_count * 0.016)
     if active_pair_key(state) == "fire_water":
         base_power *= 1.18
     elif active_pair_key(state) == "fire_air":
@@ -76,9 +234,9 @@ def process_enemy_burn(state: dict[str, Any]) -> dict[str, Any] | None:
     stacks = int(enemy.get("burn_stacks", 0))
     damage = float(enemy.get("burn_power", 0.0)) * (0.55 + stacks * 0.18)
     if pair_key == "fire_air" and enemy.get("type") == "group":
-        damage *= 1.25
+        damage *= 1.14
     if pair_key == "fire_earth" and enemy.get("type") in {"elite", "boss"}:
-        damage *= 1.18
+        damage *= 1.1
     enemy["burn_tick_at"] = now + 0.7
     hit = apply_damage(state, round(damage, 2), source="burn")
     hit["source"] = "burn"
@@ -86,9 +244,13 @@ def process_enemy_burn(state: dict[str, Any]) -> dict[str, Any] | None:
     hit["burn_tick"] = True
     return hit
 
+
 def resolve_enemy_death(state: dict[str, Any]) -> dict[str, Any]:
     defeated_enemy = dict(state["enemy"])
+    current_stage = int(state.get("stage", 1))
     reward = defeated_enemy["reward"] * gold_multiplier(state)
+    if float(defeated_enemy.get("gold_window_until", 0.0)) > time.time():
+        reward *= max(1.0, float(defeated_enemy.get("gold_window_mult", 1.0)))
     award_gold(state, reward)
     state["kills"] += 1
     state["lifetime_kills"] = int(state.get("lifetime_kills", 0)) + 1
@@ -96,8 +258,43 @@ def resolve_enemy_death(state: dict[str, Any]) -> dict[str, Any]:
     if boss_kill:
         state["boss_kills"] += 1
         state["lifetime_boss_kills"] = int(state.get("lifetime_boss_kills", 0)) + 1
-    state["stage"] += 1
-    state["enemy"] = generate_enemy(int(state["stage"]))
+
+    stage_target = stage_kill_target(current_stage)
+    stage_progress = int(state.get("stage_progress", 0)) + 1
+    state["stage_progress"] = stage_progress
+    if stage_progress >= stage_target:
+        state["stage"] = current_stage + 1
+        state["stage_progress"] = 0
+
+    state["wave_progress"] = int(state.get("wave_progress", 0)) + 1
+    wave_size = max(1, int(state.get("wave_size", 1) or 1))
+    wave_completed = int(state.get("wave_progress", 0)) >= wave_size
+
+    state["last_enemy_id"] = defeated_enemy.get("id")
+    next_enemy_type = None
+    if wave_completed:
+        state["wave_in_progress"] = False
+        state["wave_waiting"] = True
+        state["wave_index"] = max(1, int(state.get("wave_index", 1))) + 1
+        state["wave_size"] = 0
+        prepare_next_wave_preview(state)
+        next_enemy_type = state["enemy"]["type"]
+    else:
+        next_slot = int(state.get("wave_progress", 0)) + 1
+        next_kind = wave_slot_kind(wave_size, next_slot)
+        theme_id = str(state.get("wave_theme_id") or wave_theme_for_index(int(state.get("wave_index", 1)))["id"])
+        next_enemy = generate_enemy(
+            int(state["stage"]),
+            state.get("last_enemy_id"),
+            wave_theme_id=theme_id,
+            forced_kind=next_kind,
+            wave_slot=next_slot,
+            wave_size=wave_size,
+        )
+        state["enemy"] = next_enemy
+        state["last_enemy_id"] = next_enemy.get("id")
+        next_enemy_type = next_enemy["type"]
+
     update_records(state)
     return {
         "enemy_id": defeated_enemy["id"],
@@ -106,11 +303,18 @@ def resolve_enemy_death(state: dict[str, Any]) -> dict[str, Any]:
         "reward": round(reward, 2),
         "boss_kill": boss_kill,
         "next_stage": int(state["stage"]),
-        "next_enemy_type": state["enemy"]["type"],
+        "next_enemy_type": next_enemy_type,
+        "stage_cleared": stage_progress >= stage_target,
+        "stage_progress": int(state.get("stage_progress", 0)),
+        "stage_target": stage_kill_target(int(state.get("stage", 1))),
+        "wave_completed": wave_completed,
+        "wave_progress": int(state.get("wave_progress", 0)),
+        "wave_size": wave_size,
     }
 
 
 def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", source_meta: dict[str, Any] | None = None) -> dict[str, Any]:
+    refresh_enemy_temporary_effects(state)
     result = {
         "kills": 0,
         "gold_gained": 0.0,
@@ -135,8 +339,12 @@ def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", sour
         "player_defeated": False,
         "player_shield_broken": False,
     }
-    remaining = max(0.0, damage)
+    if not can_fight(state):
+        result["blocked"] = True
+        result["blocked_reason"] = "wave_paused"
+        return result
 
+    remaining = max(0.0, damage)
     while remaining > 0 and result["kills"] < MAX_KILLS_PER_TICK:
         adjusted_damage, mechanic_info = damage_after_enemy_mechanics(state, remaining, source, source_meta=source_meta)
         result["blocked"] = result["blocked"] or mechanic_info.get("blocked", False)
@@ -144,7 +352,6 @@ def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", sour
             result["blocked_reason"] = mechanic_info["blocked_reason"]
         result["shield_hit"] = result["shield_hit"] or mechanic_info.get("shield_hit", False)
         result["seal_hit"] = result["seal_hit"] or mechanic_info.get("seal_hit", False)
-
         if adjusted_damage <= 0:
             break
 
@@ -156,15 +363,21 @@ def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", sour
             result["shield_damage"] = round(result.get("shield_damage", 0.0) + absorbed, 2)
             if shield_before > 0 and float(enemy.get("shield_hp", 0.0)) <= 0:
                 result["shield_broken"] = True
+                if enemy.get("mechanic") == "shield_hits":
+                    enemy["combo_vuln_until"] = max(float(enemy.get("combo_vuln_until", 0.0)), time.time() + 2.5)
+                    enemy["combo_vuln_mult"] = max(float(enemy.get("combo_vuln_mult", 1.0)), 1.35)
             result["enemy_phase"] = enemy_phase_name(state)
             result["enemy_status"] = enemy_status_text(state)
             break
+
         if enemy.get("type") in {"elite", "boss"} and float(enemy.get("armor", 0.0)) > 0:
-            armor_damage = adjusted_damage * (0.18 if source == "dps" else 0.45)
+            armor_damage = adjusted_damage * (0.24 if source == "dps" else 0.52)
             if source in {"tap", "swipe", "hold"}:
                 armor_damage *= earth_armor_break_multiplier(state)
+            if float(enemy.get("armor_exposed_until", 0.0)) > time.time():
+                armor_damage *= max(1.0, float(enemy.get("armor_exposed_mult", 1.0)))
             if source == "hold" and is_hero_active(state, "water"):
-                armor_damage *= 0.75
+                armor_damage *= 0.82
             if source == "burn":
                 armor_damage *= 0.2
             armor_before = float(enemy.get("armor", 0.0))
@@ -173,10 +386,14 @@ def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", sour
             if armor_before > 0 and enemy["armor"] <= 0:
                 result["armor_broken"] = True
                 enemy["shatter_until"] = time.time() + 5.0
-            adjusted_damage *= 0.5 if armor_before > 0 else 1.0
+            adjusted_damage *= 0.64 if armor_before > 0 else 1.0
 
         if float(enemy.get("shatter_until", 0.0)) > time.time():
-            adjusted_damage *= 1.22
+            adjusted_damage *= 1.16
+        if float(enemy.get("combo_vuln_until", 0.0)) > time.time():
+            adjusted_damage *= max(1.0, float(enemy.get("combo_vuln_mult", 1.0)))
+        if float(enemy.get("armor_exposed_until", 0.0)) > time.time() and source in {"tap", "swipe", "hold"}:
+            adjusted_damage *= max(1.0, float(enemy.get("armor_exposed_mult", 1.0)))
 
         hp = float(enemy["hp"])
         if adjusted_damage >= hp:
@@ -188,6 +405,9 @@ def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", sour
             result["defeated_enemy_name"] = death_info["enemy_name"]
             result["defeated_enemy_type"] = death_info["enemy_type"]
             result["next_enemy_type"] = death_info["next_enemy_type"]
+            result["wave_completed"] = death_info.get("wave_completed", False)
+            result["wave_progress"] = death_info.get("wave_progress")
+            result["wave_size"] = death_info.get("wave_size")
             result["enemy_phase"] = enemy_phase_name(state)
             result["enemy_status"] = enemy_status_text(state)
             continue
@@ -196,7 +416,6 @@ def apply_damage(state: dict[str, Any], damage: float, source: str = "tap", sour
         result["enemy_phase"] = enemy_phase_name(state)
         result["enemy_status"] = enemy_status_text(state)
         break
-
     return result
 
 
@@ -206,12 +425,16 @@ def advance_state(state: dict[str, Any]) -> dict[str, Any] | None:
     elapsed = min(elapsed, MAX_OFFLINE_PROGRESS_SECONDS)
     state["last_tick"] = now
     sync_player_combat_stats(state)
+    refresh_enemy_temporary_effects(state)
     result = None
 
     if elapsed > 0:
         sustain = process_player_regen(state, elapsed)
         if sustain.get("player_healed") or sustain.get("player_shielded"):
             result = merge_battle_result(result, sustain)
+
+    if not can_fight(state):
+        return result
 
     dps = total_hero_dps(state)
     if elapsed > 0 and dps > 0:
@@ -224,8 +447,8 @@ def advance_state(state: dict[str, Any]) -> dict[str, Any] | None:
     incoming = process_enemy_attacks(state, elapsed)
     if incoming:
         result = merge_battle_result(result, incoming)
-
     return result
+
 
 def merge_battle_result(base: dict[str, Any] | None, extra: dict[str, Any] | None) -> dict[str, Any] | None:
     if extra is None:
@@ -235,10 +458,13 @@ def merge_battle_result(base: dict[str, Any] | None, extra: dict[str, Any] | Non
     merged = dict(base)
     for key in ("kills", "gold_gained", "armor_damage", "shield_damage", "player_damage_taken", "player_damage_blocked", "player_healed", "player_shielded"):
         merged[key] = round(float(merged.get(key, 0.0)) + float(extra.get(key, 0.0)), 2)
-    for key in ("boss_kill", "blocked", "shield_hit", "seal_hit", "armor_broken", "shield_broken", "player_defeated", "player_shield_broken", "sustain_tick"):
+    for key in ("boss_kill", "blocked", "shield_hit", "seal_hit", "armor_broken", "shield_broken", "player_defeated", "player_shield_broken", "sustain_tick", "wave_completed"):
         merged[key] = bool(merged.get(key)) or bool(extra.get(key))
     for key in ("blocked_reason", "enemy_phase", "enemy_status", "defeated_enemy_name", "defeated_enemy_type", "next_enemy_type", "enemy_attack_kind"):
         if extra.get(key) not in (None, ""):
+            merged[key] = extra.get(key)
+    for key in ("wave_progress", "wave_size"):
+        if extra.get(key) is not None:
             merged[key] = extra.get(key)
     if extra.get("enemy_attack"):
         merged["enemy_attack"] = extra.get("enemy_attack")
@@ -261,7 +487,7 @@ def process_player_regen(state: dict[str, Any], elapsed: float) -> dict[str, flo
 
 def process_enemy_attacks(state: dict[str, Any], elapsed: float) -> dict[str, Any] | None:
     enemy = state["enemy"]
-    interval = max(0.65, float(enemy.get("attack_interval", 2.0)) / max(0.35, float(enemy.get("attack_speed_mult", 1.0))))
+    interval = max(0.7, float(enemy.get("attack_interval", 2.0)) / max(0.35, float(enemy.get("attack_speed_mult", 1.0))))
     last_attack_at = float(enemy.get("last_attack_at", time.time()))
     now = time.time()
     attacks = int((now - last_attack_at) // interval)
@@ -272,9 +498,9 @@ def process_enemy_attacks(state: dict[str, Any], elapsed: float) -> dict[str, An
     for _ in range(attacks):
         raw = float(enemy.get("attack_damage", 0.0)) * float(enemy.get("attack_damage_mult", 1.0))
         if enemy.get("type") == "boss" and enemy.get("mechanic") == "rage_phase" and float(enemy.get("hp", 0.0)) / max(1.0, float(enemy.get("max_hp", 1.0))) <= 0.5:
-            raw *= 1.22
+            raw *= 1.14
         if enemy.get("mechanic") == "shadow" and boss_shadow_active(enemy):
-            raw *= 1.1
+            raw *= 1.06
         damage_result = apply_damage_to_player(state, raw, attack_kind=str(enemy.get("attack_kind", "hit")))
         result = merge_battle_result(result, damage_result)
         if damage_result.get("player_defeated"):
@@ -364,22 +590,28 @@ def swipe_combo_payload(pair_key: str, combo_key: str) -> dict[str, Any] | None:
 
 
 def swipe_damage_value(state: dict[str, Any], direction: str, combo: dict[str, Any] | None) -> tuple[float, float]:
-    damage = base_tap_damage(state) * 0.8
+    damage = base_tap_damage(state) * 0.92
     damage *= swipe_direction_multiplier(direction)
     active = set(active_hero_ids(state))
+    pair_key = active_pair_key(state)
+    wave_index = max(1, int(state.get("wave_index", 1)))
     if "air" in active:
         level = hero_level(state, "air")
-        damage *= 1 + level * 0.02 + hero_breakpoint_count(level) * 0.18
+        damage *= 1 + level * 0.022 + hero_breakpoint_count(level) * 0.2
     if "water" in active:
         level = hero_level(state, "water")
-        damage *= 1 + level * 0.012 + hero_breakpoint_count(level) * 0.08
+        damage *= 1 + level * 0.014 + hero_breakpoint_count(level) * 0.1
     if combo:
         damage *= float(combo.get("damage_mult", 1.0))
+    if wave_index > 10 and "air" in pair_key:
+        damage *= 1.25
     armor_mult = float(combo.get("armor_mult", 1.0)) if combo else 1.0
     if state["enemy"].get("type") in {"elite", "boss"} and ("earth" in active or armor_mult > 1.0):
         level = hero_level(state, "earth") if "earth" in active else 0
-        damage *= 1 + level * 0.015 + hero_breakpoint_count(level) * 0.1
+        damage *= 1 + level * 0.018 + hero_breakpoint_count(level) * 0.12
         damage *= armor_mult
+    if wave_index > 10 and "earth" in pair_key:
+        damage *= 1.2
     return round(damage, 2), armor_mult
 
 
@@ -402,9 +634,10 @@ def register_swipe_combo(state: dict[str, Any], direction: str) -> tuple[str, li
 def hold_damage_value(state: dict[str, Any], duration_ms: int) -> tuple[float, dict[str, Any]]:
     duration_ms = max(HOLD_MIN_MS, min(HOLD_MAX_MS, int(duration_ms)))
     charge = duration_ms / HOLD_MAX_MS
-    base = base_tap_damage(state) * (0.55 + charge * 1.55)
-    ticks = HOLD_BASE_TICKS + int(charge * 6)
+    base = base_tap_damage(state) * (0.58 + charge * 1.28)
+    ticks = HOLD_BASE_TICKS + int(charge * 4)
     pair_key = active_pair_key(state)
+    wave_index = max(1, int(state.get("wave_index", 1)))
     extra = 1.0
     effect = "Пустой канал без стихии."
     visual = "fx-water"
@@ -412,22 +645,22 @@ def hold_damage_value(state: dict[str, Any], duration_ms: int) -> tuple[float, d
     shield_amount = 0.0
     if is_hero_active(state, "water"):
         extra *= water_hold_multiplier(state)
-        heal_amount += (player_max_hp_value(state) * (0.02 + charge * 0.05)) * player_heal_power_value(state)
+        heal_amount += (player_max_hp_value(state) * (0.015 + charge * 0.035)) * player_heal_power_value(state)
         effect = "Вода разгоняет удержание тапа, лечит верховного шамана и выливает поток урона."
     if is_hero_active(state, "earth"):
-        shield_amount += player_max_shield_value(state) * (0.12 + charge * 0.22)
+        shield_amount += player_max_shield_value(state) * (0.096 + charge * 0.176)
     if pair_key == "fire_water":
-        extra *= 1.22
+        extra *= 1.12
         heal_amount *= 1.12
         effect = "Паровой канал: отпускание даёт горячий всплеск и подлечивает шамана."
         visual = "fx-steam"
     elif pair_key == "air_water":
-        extra *= 1.18
+        extra *= 1.12
         heal_amount *= 1.16
         effect = "Штормовой канал: ветер режет поток по группе и ускоряет отхил."
         visual = "fx-storm"
     elif pair_key == "water_earth":
-        extra *= 1.16
+        extra *= 1.14
         heal_amount *= 1.12
         shield_amount *= 1.3
         effect = "Грязевой нажим: поток давит броню, лечит и набрасывает щит верховному шаману."
@@ -436,9 +669,13 @@ def hold_damage_value(state: dict[str, Any], duration_ms: int) -> tuple[float, d
         extra *= 1.08
         visual = "fx-fire-wind"
     if state["enemy"].get("type") == "group":
-        extra *= 1.15
+        extra *= 1.08
     if state["enemy"].get("type") in {"elite", "boss"} and is_hero_active(state, "earth"):
-        extra *= 1.1
+        extra *= 1.06
+    if wave_index > 10 and "water" in pair_key:
+        extra *= 1.35
+    if wave_index > 10 and "earth" in pair_key:
+        extra *= 1.2
     return round(base * extra, 2), {
         "ticks": ticks,
         "charge": round(charge, 2),
@@ -448,4 +685,3 @@ def hold_damage_value(state: dict[str, Any], duration_ms: int) -> tuple[float, d
         "heal_amount": round(heal_amount, 2),
         "shield_amount": round(shield_amount, 2),
     }
-

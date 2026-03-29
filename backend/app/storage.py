@@ -142,9 +142,9 @@ def merge_state(data: dict[str, Any]) -> dict[str, Any]:
                     break
     state["active_heroes"] = normalized_active
     state["rituals"].update(data.get("rituals", {}))
-    enemy = data.get("enemy") or generate_enemy(int(state["stage"]))
+    enemy = data.get("enemy") or generate_enemy(int(state["stage"]), data.get("last_enemy_id"))
     if "hp" not in enemy or "max_hp" not in enemy:
-        enemy = generate_enemy(int(state["stage"]))
+        enemy = generate_enemy(int(state["stage"]), data.get("last_enemy_id"))
     state["enemy"] = enemy
     state["last_tick"] = float(data.get("last_tick", time.time()))
     if not isinstance(state.get("top_runs"), list):

@@ -52,6 +52,21 @@ const els = {
   rebirthBtn: $('rebirth-btn'),
   rebirthGain: $('rebirth-gain'),
   rebirthCount: $('rebirth-count'),
+  rebirthDepth: $('rebirth-depth'),
+  rebirthBoss: $('rebirth-boss'),
+  rebirthWaveBonus: $('rebirth-wave-bonus'),
+  rebirthElite: $('rebirth-elite'),
+  rebirthLockText: $('rebirth-lock-text'),
+  blessingsList: $('blessings-list'),
+  blessingSynergies: $('blessing-synergies'),
+  rebirthOverlay: $('rebirth-overlay'),
+  overlayRebirthGain: $('overlay-rebirth-gain'),
+  rebirthChoiceList: $('rebirth-choice-list'),
+  rebirthContinueBtn: $('rebirth-continue-btn'),
+  rebirthResultText: $('rebirth-result-text'),
+  rebirthStep1: $('rebirth-step-1'),
+  rebirthStep2: $('rebirth-step-2'),
+  rebirthRitualFx: $('rebirth-ritual-fx'),
   achievementsSummary: $('achievements-summary'),
   achievementsList: $('achievements-list'),
   topBestScore: $('top-best-score'),
@@ -80,6 +95,19 @@ const els = {
   holdEarthState: $('hold-earth-state'),
   holdHint: $('hold-hint'),
   swipeTrailLayer: $('swipe-trail-layer'),
+  waveLocation: $('wave-location'),
+  waveHint: $('wave-hint'),
+  waveRecommended: $('wave-recommended'),
+  waveProgressPill: $('wave-progress-pill'),
+  startWaveBtn: $('start-wave-btn'),
+  stopExpeditionBtn: $('stop-expedition-btn'),
+  waveTransitionOverlay: $('wave-transition-overlay'),
+  waveTransitionWave: $('wave-transition-wave'),
+  waveTransitionTitle: $('wave-transition-title'),
+  waveTransitionCopy: $('wave-transition-copy'),
+  waveTransitionReward: $('wave-transition-reward'),
+  waveTransitionContinueBtn: $('wave-transition-continue-btn'),
+  waveTransitionStopBtn: $('wave-transition-stop-btn'),
 };
 
 const tabButtons = bySelectorAll('.tab-btn');
@@ -102,6 +130,8 @@ let localSwipeHistory = [];
 let guestId = localStorage.getItem('steppe_shaman_guest_id') || `guest-${Math.random().toString(36).slice(2, 10)}`;
 
 localStorage.setItem('steppe_shaman_guest_id', guestId);
+
+let pendingWaveAutoStart = false;
 
 let pointerState = {
   active: false,
@@ -178,6 +208,20 @@ function pairLabel(pairKey) {
   return map[pairKey] || 'Комбо жестов';
 }
 
+function recommendedPairsText(items) {
+  const list = safeArray(items).map((item) => String(item || '').trim()).filter(Boolean);
+  return list.length ? `Следы: ${list.join(' · ')}` : 'Следы: степь молчит';
+}
+
+function renderGroupGlyph(enemy) {
+  const count = Math.max(3, Math.min(6, Number(enemy.count || 4)));
+  const icons = Array.from({ length: count }, (_, index) => `
+    <div class="enemy-pack-icon slot-${index + 1}">
+      <img src="${enemy.glyph}" alt="${enemy.name}" class="enemy-icon">
+    </div>`).join('');
+  return `<div class="enemy-pack">${icons}<div class="enemy-pack-badge">x${count}</div></div>`;
+}
+
 function activateTab(tab) {
   tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
   tabPanels.forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === tab));
@@ -222,6 +266,8 @@ async function request(path, method = 'GET', body = null) {
 
 function setButtonsDisabled(disabled) {
   if (els.tapUpgradeBtn) els.tapUpgradeBtn.disabled = disabled;
+  if (els.startWaveBtn) els.startWaveBtn.disabled = disabled || Boolean(state?.wave_state?.in_progress);
+  if (els.stopExpeditionBtn) els.stopExpeditionBtn.disabled = disabled || !Boolean(state?.wave_state?.in_progress);
   if (els.rebirthBtn) els.rebirthBtn.disabled = disabled || !(state?.can_rebirth);
   document.querySelectorAll('[data-hero-buy-id], [data-hero-toggle-id], [data-active-hero-id]').forEach((node) => {
     node.disabled = disabled;
@@ -422,6 +468,9 @@ function hitLabel(lastHit) {
   if (lastHit.blocked && lastHit.blocked_reason === 'combo_gate') return 'Печать';
   if (lastHit.blocked && lastHit.blocked_reason === 'swipe_gate') return 'Нужен свайп';
   if (lastHit.blocked && lastHit.blocked_reason === 'hold_gate') return 'Нужен hold';
+  if (lastHit.blocked && lastHit.blocked_reason === 'pair_mismatch') return 'Не та связка';
+  if (lastHit.blocked && lastHit.blocked_reason === 'pair_action_mismatch') return 'Не тот стиль';
+  if (lastHit.blocked && lastHit.blocked_reason === 'pair_combo_mismatch') return 'Нужен комбо-свайп';
   if (lastHit.source === 'swipe') {
     if (lastHit.combo_name) return `${lastHit.combo_name} ${fmt(lastHit.damage)}`;
     return `${directionLabel(lastHit.swipe_direction)} ${fmt(lastHit.damage)}`;
@@ -454,12 +503,85 @@ function renderKill(lastHit) {
 function mechanicAction(enemy, lastHit) {
   if (!enemy) return '';
   if (lastHit?.blocked_reason === 'shadow') return 'Бей тапом';
-  if (lastHit?.blocked_reason === 'shield' || enemy.mechanic === 'shield_hits') return enemy.shield_hp > 0 ? 'Нужна земная связка по щиту' : 'Щит лопнул';
+  if (lastHit?.blocked_reason === 'shield' || enemy.mechanic === 'shield_hits') return enemy.shield_hp > 0 ? 'Свайп + Земля по щиту' : 'Щит лопнул';
   if (lastHit?.blocked_reason === 'combo_gate') return 'Тяжёлый свайп вниз';
   if (lastHit?.blocked_reason === 'swipe_gate') return 'Нужен свайп';
   if (lastHit?.blocked_reason === 'hold_gate') return 'Нужен hold';
-  const map = { shadow: 'Тап в окно', shield_hits: 'Серия тапов', combo_gate: 'Свайп вниз', rage_phase: 'Дожимай фазу', swipe_gate: 'Режь свайпами', hold_gate: 'Зажимай hold' };
+  if (lastHit?.blocked_reason === 'pair_mismatch') return 'Читай следы локации';
+  if (lastHit?.blocked_reason === 'pair_action_mismatch') return 'Эта связка бьёт иначе';
+  if (lastHit?.blocked_reason === 'pair_combo_mismatch') return 'Открой тяжёлый комбо-свайп';
+  const map = { shadow: 'Тап в окно', shield_hits: 'Свайпни с Землёй', combo_gate: 'DD или RRUU через Землю', rage_phase: 'Дожимай фазу комбо', swipe_gate: 'Режь свайпами', hold_gate: 'Зажимай hold' };
   return map[enemy.mechanic] || (enemy.status || '');
+}
+
+
+function waveVictoryFlavor(waveNumber, enemyType = 'normal') {
+  const boss = [
+    'Хана прижал. Даже ветер стих.',
+    'Большой зверь лёг. Теперь степь дышит ровнее.',
+    'Босса осадил жёстко. Круг шаманов не зря ел хлеб.',
+  ];
+  const elite = [
+    'Жирного снял чисто. Без суеты, по делу.',
+    'Элитку уложил ровно. След в степи остался.',
+    'Крепыша дожал как надо. Пыль только осела.',
+  ];
+  const regular = [
+    'Волна сыпанулась, как сухая трава под ветром.',
+    'Разобрал их тихо, по-степному, без лишнего шума.',
+    'Тропа чистая. Можно гнать дальше.',
+    'Стаю осадил ровно. Степь кивнула.',
+  ];
+  const pool = enemyType === 'boss' ? boss : enemyType === 'elite' ? elite : regular;
+  return pool[(Math.max(1, Number(waveNumber || 1)) - 1) % pool.length];
+}
+
+function openWaveTransitionOverlay(summary) {
+  if (!els.waveTransitionOverlay || !summary) return;
+  setText(els.waveTransitionWave, `Волна ${summary.wave || 1} пройдена`);
+  setText(els.waveTransitionTitle, waveVictoryFlavor(summary.wave, summary.enemyType));
+  setText(els.waveTransitionCopy, summary.copy || 'Добычу собрал. Дальше решай сам: идти глубже или сворачивать поход.');
+  setText(els.waveTransitionReward, `+${fmt(summary.reward || 0)} золота`);
+  els.waveTransitionOverlay.classList.remove('hidden');
+  document.body.classList.add('wave-transition-open');
+}
+
+function closeWaveTransitionOverlay() {
+  els.waveTransitionOverlay?.classList.add('hidden');
+  document.body.classList.remove('wave-transition-open');
+}
+
+function maybeShowWaveTransition(lastHit) {
+  if (!lastHit?.wave_completed) return;
+  const completedWave = Math.max(1, Number(state?.wave_state?.index || 1) - 1);
+  const enemyType = lastHit.enemy_type || lastHit.defeated_enemy_type || 'normal';
+  let copy = 'Добычу собрал. Дальше решай сам: идти глубже или сворачивать поход.';
+  if (enemyType === 'boss') copy = 'Большого уложил. Добыча тяжёлая, путь дальше ещё злее.';
+  else if (enemyType === 'elite') copy = 'Крепкий замес закрыт. Можно брать паузу или жать дальше.';
+  openWaveTransitionOverlay({
+    wave: completedWave,
+    reward: Number(lastHit.gold_gained || lastHit.reward || 0),
+    enemyType,
+    copy,
+  });
+}
+
+function renderWavePanel(waveState) {
+  if (!waveState) return;
+  setText(els.waveLocation, waveState.location || 'Степь');
+  setText(els.waveHint, waveState.hint || 'Степь шепчет что-то мутное.');
+  setText(els.waveRecommended, recommendedPairsText(waveState.recommended_pairs));
+  const progressText = waveState.in_progress
+    ? `Бой ${Math.min(Number(waveState.progress || 0) + 1, Math.max(1, Number(waveState.size || 1)))}/${Math.max(1, Number(waveState.size || 1))}`
+    : 'Пауза между волнами';
+  setText(els.waveProgressPill, progressText);
+  if (els.startWaveBtn) {
+    els.startWaveBtn.textContent = waveState.in_progress ? 'Волна идёт' : (Number(waveState.index || 1) <= 1 && !Number(waveState.progress || 0) ? 'Начать волну' : 'Следующая волна');
+    els.startWaveBtn.disabled = loading || Boolean(waveState.in_progress);
+  }
+  if (els.stopExpeditionBtn) {
+    els.stopExpeditionBtn.disabled = loading || !Boolean(waveState.in_progress);
+  }
 }
 
 function renderBossMechanic(enemy, lastHit) {
@@ -506,8 +628,8 @@ function renderHoldHud(holdState, lastHit = null) {
   const waterActive = Boolean(holdState?.water_active);
   const earthActive = Boolean(holdState?.earth_active);
 
-  let textValue = waterActive ? 'С водой hold бьёт заметно злее.' : 'водяной шаман мошный hold делает.';
-  if (earthActive) textValue += ' Земля щит дает верховному шаману.';
+  let textValue = waterActive ? 'С водой hold бьёт заметно злее.' : 'Без воды hold — ситуативный добор.';
+  if (earthActive) textValue += ' Земля сверху даёт щит верховному шаману.';
   if (lastHit?.source === 'hold') {
     textValue = lastHit.combo_effect || 'Заряд выпущен.';
     if (Number(lastHit.player_healed || 0) > 0) textValue += ` · хил ${fmt(lastHit.player_healed)}`;
@@ -582,7 +704,7 @@ function renderActiveHeroes(activeHeroes) {
         setState(next);
         showToast('Снял из связки');
       } catch (error) {
-        showToast(error.message === 'hero_not_owned' ? 'Сначала найми шамана' : 'Не удалось снять шамана');
+        if (error.message === 'hero_not_owned') showToast('Сначала найми шамана'); else if (error.message === 'wave_locked') showToast('Связку меняем только между волнами'); else showToast('Не удалось снять шамана');
       } finally {
         loading = false;
         setButtonsDisabled(false);
@@ -640,7 +762,7 @@ function renderHeroes(heroes) {
         setState(next);
         showToast(btn.dataset.owned === '1' ? 'Шаман усилен' : 'Шаман нанят');
       } catch (error) {
-        showToast(error.message === 'not_enough_gold' ? 'Золота маловато' : 'Не вышло усилить шамана');
+        if (error.message === 'not_enough_gold') showToast('Золота маловато'); else if (error.message === 'wave_locked') showToast('Апгрейды между волнами'); else showToast('Не вышло усилить шамана');
       } finally {
         loading = false;
         setButtonsDisabled(false);
@@ -660,6 +782,7 @@ function renderHeroes(heroes) {
       } catch (error) {
         if (error.message === 'circle_full') showToast('В связке только 2 шамана. Сними одного.');
         else if (error.message === 'hero_not_owned') showToast('Сначала найми шамана');
+        else if (error.message === 'wave_locked') showToast('Связку меняем только между волнами');
         else showToast('Не вышло обновить связку');
       } finally {
         loading = false;
@@ -773,7 +896,7 @@ function renderEnemy(enemy) {
       els.enemyImage.classList.add('hidden');
     }
     if (els.enemyGlyph) {
-      els.enemyGlyph.innerHTML = enemy.glyph ? `<img src="${enemy.glyph}" alt="${enemy.name}" class="enemy-icon">` : '✦';
+      els.enemyGlyph.innerHTML = enemy.glyph ? (enemy.type === 'group' ? renderGroupGlyph(enemy) : `<img src="${enemy.glyph}" alt="${enemy.name}" class="enemy-icon">`) : '✦';
       els.enemyGlyph.classList.remove('hidden');
     }
   } else {
@@ -811,15 +934,125 @@ function renderEnemy(enemy) {
 
 function showHitToast(lastHit, previousEnemyId) {
   if (!lastHit) return;
-  if (lastHit.blocked && lastHit.blocked_reason === 'shadow') showToast('Босс ушёл в тень — DPS сейчас не проходит');
+  if (lastHit.blocked && lastHit.blocked_reason === 'wave_paused') showToast('Сначала жми «Начать волну»');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'shadow') showToast('Босс ушёл в тень — DPS сейчас не проходит');
   else if (lastHit.blocked && lastHit.blocked_reason === 'shield') showToast(state?.enemy?.shield_hp > 0 ? `Щит трещит: ${fmt(state.enemy.shield_hp)}` : 'Щит сломан');
   else if (lastHit.blocked && lastHit.blocked_reason === 'earth_shield') showToast('Каменный щит почти не пускает урон без земной связки');
   else if (lastHit.blocked && lastHit.blocked_reason === 'combo_gate') showToast('Нужен тяжёлый земной комбо-свайп вниз');
   else if (lastHit.blocked && lastHit.blocked_reason === 'swipe_gate') showToast('Нужен свайп');
   else if (lastHit.blocked && lastHit.blocked_reason === 'hold_gate') showToast('Нужен hold');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'burn_gate') showToast('Сначала раскочегарь поджог');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'mirror_repeat') showToast('Не долби один и тот же свайп подряд');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'chain_repeat') showToast('Меняй tap / swipe / hold, босс жрёт повторы');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'pair_mismatch') showToast('После 10-й волны нужна правильная связка шаманов');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'pair_action_mismatch') showToast('Связка выбрана верно, но нужен другой тип удара');
+  else if (lastHit.blocked && lastHit.blocked_reason === 'pair_combo_mismatch') showToast('Эта цель раскрывается только через комбо-свайпы');
   else if (lastHit.combo_name) showToast(lastHit.combo_name);
   else if (lastHit.boss_kill) showToast(`Босс пал. Награда: ${fmt(lastHit.gold_gained)}`);
   else if (previousEnemyId && previousEnemyId !== state?.enemy?.id && lastHit.gold_gained) showToast(`Лут: +${fmt(lastHit.gold_gained)}`);
+}
+
+function blessingIcon(id) {
+  return ({ fire: '🔥', water: '💧', earth: '🪨', air: '💨' }[id] || '✦');
+}
+
+function blessingTitle(id) {
+  return ({ fire: 'Путь Огня', water: 'Путь Воды', earth: 'Путь Земли', air: 'Путь Ветра' }[id] || 'Дар');
+}
+
+function renderBlessings(blessings) {
+  if (!els.blessingsList) return;
+  const items = safeArray(blessings?.items);
+  els.blessingsList.innerHTML = items.map((item) => `
+    <div class="blessing-card">
+      <div class="blessing-card-head">
+        <strong>${blessingIcon(item.id)} ${item.name}</strong>
+        <span>ур. ${item.level || 0}</span>
+      </div>
+      <div class="blessing-card-desc">${item.desc || ''}</div>
+      <div class="blessing-card-foot">Следующий дар: ${fmt(item.cost || 0)} троф.</div>
+    </div>
+  `).join('');
+
+  if (els.blessingSynergies) {
+    const syn = blessings?.synergies || {};
+    const rows = [
+      { key: 'fire_air', name: '🔥 + 💨 Искровой разгон', value: syn.fire_air },
+      { key: 'fire_earth', name: '🔥 + 🪨 Треск панциря', value: syn.fire_earth },
+      { key: 'water_earth', name: '💧 + 🪨 Тяжёлая хватка', value: syn.water_earth },
+    ];
+    els.blessingSynergies.innerHTML = rows.map((row) => `
+      <div class="synergy-row ${row.value > 0 ? 'is-active' : ''}">
+        <span>${row.name}</span>
+        <strong>${row.value > 0 ? `+${Math.round(row.value * 100)}%` : 'не открыт'}</strong>
+      </div>
+    `).join('');
+  }
+}
+
+function openRebirthOverlay() {
+  if (!state) return;
+  const items = safeArray(state.blessings?.items);
+  if (els.overlayRebirthGain) els.overlayRebirthGain.textContent = `+${state.rebirth_gain || 0}`;
+  if (els.rebirthChoiceList) {
+    els.rebirthChoiceList.innerHTML = items.map((item) => `
+      <button class="rebirth-choice" data-path="${item.id}" type="button">
+        <span>${blessingIcon(item.id)} ${item.name}</span>
+        <small>ур. ${item.level || 0} · след. дар ${fmt(item.cost || 0)} троф.</small>
+      </button>
+    `).join('');
+    els.rebirthChoiceList.querySelectorAll('[data-path]').forEach((btn) => {
+      btn.addEventListener('click', () => confirmRebirth(btn.dataset.path));
+    });
+  }
+  els.rebirthStep1?.classList.add('active');
+  els.rebirthStep2?.classList.remove('active');
+  els.rebirthOverlay?.classList.remove('hidden');
+  document.body.classList.add('rebirth-open');
+}
+
+function closeRebirthOverlay() {
+  els.rebirthOverlay?.classList.add('hidden');
+  document.body.classList.remove('rebirth-open');
+}
+
+function showRebirthResult(summary) {
+  const path = summary?.path || 'fire';
+  const title = blessingTitle(path);
+  const invested = !!summary?.invested;
+  if (els.rebirthResultText) {
+    els.rebirthResultText.innerHTML = invested
+      ? `Дар принят.<br>Степь запомнила твой путь. Усилен: <strong>${title}</strong>.`
+      : `Трофеи приняты духами.<br>До следующего дара <strong>${title}</strong> пока не хватило, но путь уже отмечен.`;
+  }
+  if (els.rebirthRitualFx) {
+    els.rebirthRitualFx.className = `rebirth-ritual-fx is-${path}`;
+  }
+  els.rebirthStep1?.classList.remove('active');
+  els.rebirthStep2?.classList.add('active');
+}
+
+async function confirmRebirth(path) {
+  if (loading) return;
+  try {
+    loading = true;
+    setButtonsDisabled(true);
+    const next = await request('/rebirth', 'POST', { path });
+    setState(next);
+    showRebirthResult(next.last_rebirth_summary || { path });
+  } catch (error) {
+    console.error('rebirth_confirm_failed', error);
+    showToast(error.message === 'rebirth_locked' ? 'Перерождение ещё закрыто' : 'Ритуал сорвался');
+    closeRebirthOverlay();
+  } finally {
+    loading = false;
+    setButtonsDisabled(false);
+  }
+}
+
+function applyViewportMode() {
+  document.body.classList.toggle('mobile-ui', window.innerWidth <= 860);
+  document.body.classList.toggle('desktop-ui', window.innerWidth > 860);
 }
 
 function setState(next) {
@@ -857,8 +1090,22 @@ function setState(next) {
     setText(els.metaCritMultiplier, `x${state.crit_multiplier}`);
     setText(els.rebirthGain, String(state.rebirth_gain || 0));
     setText(els.rebirthCount, String(state.rebirths || 0));
+    setText(els.rebirthDepth, String(state.rebirth_breakdown?.depth || 0));
+    setText(els.rebirthBoss, String(state.rebirth_breakdown?.boss || 0));
+    setText(els.rebirthWaveBonus, String(state.rebirth_breakdown?.wave || 0));
+    setText(els.rebirthElite, String(state.rebirth_breakdown?.elite || 0));
+    if (els.rebirthLockText) {
+      const needed = Number(state.rebirth_breakdown?.stage_needed || 0);
+      els.rebirthLockText.textContent = needed > 0
+        ? `Добеги ещё ${needed} этап., чтобы духи степи услышали зов.`
+        : 'Чем глубже забег, тем жирнее трофеи. Ранний сброс режется по награде.';
+    }
+    setText($('high-shaman-hp-mobile-mirror'), `${fmt(state.high_shaman?.hp || 0)} / ${fmt(state.high_shaman?.max_hp || 0)}`);
+    setText($('dps-mobile-mirror'), fmt(state.dps));
+    setText($('def-mobile-mirror'), `${state.high_shaman?.defense || 0}%`);
 
     renderEnemy(state.enemy);
+    renderWavePanel(state.wave_state);
     renderHighShaman(state.high_shaman);
     renderBossMechanic(state.enemy, state.last_hit);
     renderSwipeHud(state.swipe_state, state.last_hit);
@@ -872,9 +1119,11 @@ function setState(next) {
     renderHeroes(state.heroes);
     renderTop(state.top);
     renderAchievements(state.achievements);
+    renderBlessings(state.blessings);
     renderHit(state.last_hit);
     renderKill(state.last_hit);
     renderPlayerCombat(state.last_hit);
+    maybeShowWaveTransition(state.last_hit);
 
     if (state.last_hit?.source === 'swipe' && state.last_hit.swipe_direction) {
       drawSwipeTrail(
@@ -892,6 +1141,10 @@ function setState(next) {
     }
 
     showHitToast(state.last_hit, previousEnemyId);
+    if (state.last_hit?.expedition_stopped) {
+      closeWaveTransitionOverlay();
+      showToast(state.last_hit.stopped_mid_wave ? 'Поход свернул. Вернулся к привалу.' : 'Поход завершён у привала.');
+    }
     setButtonsDisabled(loading);
   } catch (error) {
     console.error('set_state_failed', error, next);
@@ -911,6 +1164,7 @@ async function refreshState(silent = false) {
 
 async function tapEnemy(eventLike = null) {
   if (loading) return;
+  if (state?.wave_state?.waiting || !state?.wave_state?.in_progress) { showToast('Сначала жми «Начать волну»'); return; }
   if (eventLike?.clientX != null && eventLike?.clientY != null) {
     playPointBurst(eventLike.clientX, eventLike.clientY);
   }
@@ -930,6 +1184,7 @@ async function tapEnemy(eventLike = null) {
 
 async function swipeEnemy(direction, eventLike = null) {
   if (loading) return;
+  if (state?.wave_state?.waiting || !state?.wave_state?.in_progress) { showToast('Сначала жми «Начать волну»'); return; }
   if (eventLike?.clientX != null && eventLike?.clientY != null) {
     playPointBurst(eventLike.clientX, eventLike.clientY, 'swipe-burst');
   }
@@ -949,6 +1204,7 @@ async function swipeEnemy(direction, eventLike = null) {
 
 async function holdEnemy(durationMs, eventLike = null) {
   if (loading) return;
+  if (state?.wave_state?.waiting || !state?.wave_state?.in_progress) { showToast('Сначала жми «Начать волну»'); return; }
   if (eventLike?.clientX != null && eventLike?.clientY != null) {
     playPointBurst(eventLike.clientX, eventLike.clientY, 'hold-burst');
   }
@@ -960,6 +1216,40 @@ async function holdEnemy(durationMs, eventLike = null) {
   } catch (error) {
     console.error('hold_failed', error);
     showToast('Удержание не прошло');
+  } finally {
+    loading = false;
+    setButtonsDisabled(false);
+  }
+}
+
+
+async function startWaveAction() {
+  if (loading || state?.wave_state?.in_progress) return;
+  try {
+    loading = true;
+    setButtonsDisabled(true);
+    const next = await request('/start-wave', 'POST');
+    setState(next);
+    showToast('Волна пошла');
+  } catch (error) {
+    console.error('start_wave_failed', error);
+    showToast('Не удалось запустить волну');
+  } finally {
+    loading = false;
+    setButtonsDisabled(false);
+  }
+}
+
+async function stopExpeditionAction() {
+  if (loading || !state?.wave_state?.in_progress) return;
+  try {
+    loading = true;
+    setButtonsDisabled(true);
+    const next = await request('/stop-expedition', 'POST');
+    setState(next);
+  } catch (error) {
+    console.error('stop_expedition_failed', error);
+    showToast('Не удалось свернуть поход');
   } finally {
     loading = false;
     setButtonsDisabled(false);
@@ -1177,7 +1467,25 @@ if (els.enemyWrap) {
 }
 
 els.tapUpgradeBtn?.addEventListener('click', upgradeTap);
+els.startWaveBtn?.addEventListener('click', startWaveAction);
+els.stopExpeditionBtn?.addEventListener('click', stopExpeditionAction);
+els.waveTransitionContinueBtn?.addEventListener('click', async () => {
+  closeWaveTransitionOverlay();
+  await startWaveAction();
+});
+els.waveTransitionStopBtn?.addEventListener('click', async () => {
+  closeWaveTransitionOverlay();
+  if (state?.wave_state?.in_progress) await stopExpeditionAction();
+  else showToast('Поход завершён у привала.');
+});
 els.rebirthBtn?.addEventListener('click', rebirth);
+els.rebirthContinueBtn?.addEventListener('click', closeRebirthOverlay);
+els.rebirthOverlay?.addEventListener('click', (event) => {
+  if (event.target === els.rebirthOverlay || event.target.classList.contains('rebirth-backdrop')) closeRebirthOverlay();
+});
+els.waveTransitionOverlay?.addEventListener('click', (event) => {
+  if (event.target === els.waveTransitionOverlay || event.target.classList.contains('wave-transition-backdrop')) closeWaveTransitionOverlay();
+});
 
 document.addEventListener('keydown', (event) => {
   if (event.code === 'Space') {
@@ -1213,5 +1521,7 @@ async function boot() {
 window.addEventListener('error', (event) => {
   console.error('page_error', event.error || event.message);
 });
+window.addEventListener('resize', applyViewportMode);
+applyViewportMode();
 
 boot();

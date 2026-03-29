@@ -19,3 +19,7 @@ class PlayerIdentity(BaseModel):
     display_name: str
     username: str | None = None
     is_telegram: bool = False
+
+
+class RebirthRequest(BaseModel):
+    path: str
