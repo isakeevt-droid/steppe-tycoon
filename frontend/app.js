@@ -110,9 +110,7 @@ const els = {
   waveTransitionStopBtn: $('wave-transition-stop-btn'),
 };
 
-const tabButtons = bySelectorAll('.tabs-head .tab-btn');
-const mobileScreenButtons = bySelectorAll('.mobile-bottom-nav .screen-btn');
-const mobileScreens = bySelectorAll('[data-mobile-screen]');
+const tabButtons = bySelectorAll('.tab-btn');
 const tabPanels = bySelectorAll('.tab-section');
 const ELEMENTAL_FX_CLASSES = ['fx-fire-wind', 'fx-storm', 'fx-lava', 'fx-sand', 'fx-mud', 'fx-steam', 'fx-fire', 'fx-water', 'fx-wind', 'fx-earth', 'fx-arcane', 'fx-shadow'];
 const SWIPE_MIN_DISTANCE = 42;
@@ -230,13 +228,6 @@ function activateTab(tab) {
 }
 
 tabButtons.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
-function activateMobileScreen(screen) {
-  mobileScreenButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.screen === screen));
-  mobileScreens.forEach((panel) => panel.classList.toggle('active-mobile-screen', panel.dataset.mobileScreen === screen));
-}
-
-mobileScreenButtons.forEach((btn) => btn.addEventListener('click', () => activateMobileScreen(btn.dataset.screen)));
-
 
 function initTelegram() {
   const tg = window.Telegram?.WebApp || null;
@@ -1060,13 +1051,72 @@ async function confirmRebirth(path) {
 }
 
 function applyViewportMode() {
-  const isMobile = window.innerWidth <= 860;
-  document.body.classList.toggle('mobile-ui', isMobile);
-  document.body.classList.toggle('desktop-ui', !isMobile);
-  if (isMobile) activateMobileScreen('battle');
-  else mobileScreens.forEach((panel) => panel.classList.remove('active-mobile-screen'));
+  document.body.classList.toggle('mobile-ui', window.innerWidth <= 860);
+  document.body.classList.toggle('desktop-ui', window.innerWidth > 860);
+  initMobileOverlayLayout();
 }
 
+function isMobileViewport() {
+  return window.innerWidth <= 860;
+}
+
+function movePanelAfterAnchor(panel, anchor) {
+  if (!panel || !anchor || !anchor.parentNode) return;
+  anchor.parentNode.insertBefore(panel, anchor.nextSibling);
+}
+
+function initMobileOverlayLayout() {
+  const heroesPanel = document.querySelector('.squad-hud.mobile-card');
+  const metaPanel = document.querySelector('.side-tabs-panel.mobile-tabs-panel');
+  const heroesAnchor = $('mobile-heroes-panel-anchor');
+  const metaAnchor = $('mobile-meta-panel-anchor');
+  const heroesBody = $('mobile-heroes-overlay-body');
+  const metaBody = $('mobile-meta-overlay-body');
+
+  if (!heroesPanel || !metaPanel) return;
+
+  if (isMobileViewport()) {
+    if (heroesBody && heroesPanel.parentElement !== heroesBody) heroesBody.appendChild(heroesPanel);
+    if (metaBody && metaPanel.parentElement !== metaBody) metaBody.appendChild(metaPanel);
+  } else {
+    closeMobileOverlay();
+    if (heroesAnchor && heroesPanel.parentElement !== heroesAnchor.parentElement) movePanelAfterAnchor(heroesPanel, heroesAnchor);
+    if (metaAnchor && metaPanel.parentElement !== metaAnchor.parentElement) movePanelAfterAnchor(metaPanel, metaAnchor);
+  }
+}
+
+function openMobileOverlay(kind, initialTab = 'top') {
+  if (!isMobileViewport()) return;
+  initMobileOverlayLayout();
+  const overlay = kind === 'heroes' ? $('mobile-heroes-overlay') : $('mobile-meta-overlay');
+  if (!overlay) return;
+  if (kind === 'meta') activateTab(initialTab);
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('mobile-overlay-open');
+}
+
+function closeMobileOverlay(kind = '') {
+  const targets = [];
+  if (!kind || kind === 'heroes') targets.push($('mobile-heroes-overlay'));
+  if (!kind || kind === 'meta') targets.push($('mobile-meta-overlay'));
+  targets.forEach((overlay) => {
+    if (!overlay) return;
+    overlay.classList.add('hidden');
+    overlay.setAttribute('aria-hidden', 'true');
+  });
+  const stillOpen = [$('mobile-heroes-overlay'), $('mobile-meta-overlay')].some((node) => node && !node.classList.contains('hidden'));
+  document.body.classList.toggle('mobile-overlay-open', stillOpen);
+}
+
+function bindMobileOverlayControls() {
+  $('mobile-open-heroes')?.addEventListener('click', () => openMobileOverlay('heroes'));
+  $('mobile-open-top')?.addEventListener('click', () => openMobileOverlay('meta', 'top'));
+  $('mobile-open-rebirth')?.addEventListener('click', () => openMobileOverlay('meta', 'rebirth'));
+  document.querySelectorAll('[data-mobile-overlay-close]').forEach((node) => {
+    node.addEventListener('click', () => closeMobileOverlay(node.dataset.mobileOverlayClose || ''));
+  });
+}
 
 function setState(next) {
   if (!next || typeof next !== 'object') {
@@ -1400,10 +1450,12 @@ function resetPointer(event) {
 }
 
 function onPointerDown(event) {
+  if (event?.preventDefault) event.preventDefault();
   if (event.pointerType === 'mouse' && event.button !== 0) return;
+  const pointerId = event.pointerId ?? 'touch';
   pointerState = {
     active: true,
-    pointerId: event.pointerId,
+    pointerId,
     startX: event.clientX,
     startY: event.clientY,
     lastX: event.clientX,
@@ -1414,11 +1466,15 @@ function onPointerDown(event) {
   };
   updateHoldVisual(event.clientX, event.clientY, 0);
   startHoldCharge();
-  els.enemyWrap?.setPointerCapture?.(event.pointerId);
+  if (event.pointerId != null) {
+    els.enemyWrap?.setPointerCapture?.(event.pointerId);
+  }
 }
 
 function onPointerMove(event) {
-  if (!pointerState.active || pointerState.pointerId !== event.pointerId) return;
+  if (event?.preventDefault) event.preventDefault();
+  const pointerId = event.pointerId ?? 'touch';
+  if (!pointerState.active || pointerState.pointerId !== pointerId) return;
   pointerState.lastX = event.clientX;
   pointerState.lastY = event.clientY;
   const dx = event.clientX - pointerState.startX;
@@ -1435,7 +1491,9 @@ function onPointerMove(event) {
 }
 
 async function onPointerUp(event) {
-  if (!pointerState.active || pointerState.pointerId !== event.pointerId) return;
+  if (event?.preventDefault) event.preventDefault();
+  const pointerId = event.pointerId ?? 'touch';
+  if (!pointerState.active || pointerState.pointerId !== pointerId) return;
 
   const snapshot = {
     startX: pointerState.startX,
@@ -1469,6 +1527,7 @@ async function onPointerUp(event) {
 }
 
 function onPointerCancel(event) {
+  if (event?.preventDefault) event.preventDefault();
   resetPointer(event);
 }
 
@@ -1477,6 +1536,33 @@ if (els.enemyWrap) {
   els.enemyWrap.addEventListener('pointermove', onPointerMove);
   els.enemyWrap.addEventListener('pointerup', onPointerUp);
   els.enemyWrap.addEventListener('pointercancel', onPointerCancel);
+
+  els.enemyWrap.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    onPointerDown(touch);
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    onPointerMove(touch);
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchend', (event) => {
+    event.preventDefault();
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+    onPointerUp(touch);
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchcancel', (event) => {
+    event.preventDefault();
+    const touch = event.changedTouches?.[0] || event;
+    onPointerCancel(touch);
+  }, { passive: false });
 }
 
 els.tapUpgradeBtn?.addEventListener('click', upgradeTap);
@@ -1535,6 +1621,7 @@ window.addEventListener('error', (event) => {
   console.error('page_error', event.error || event.message);
 });
 window.addEventListener('resize', applyViewportMode);
+bindMobileOverlayControls();
 applyViewportMode();
 
 boot();

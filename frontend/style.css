@@ -1397,248 +1397,59 @@ body.wave-transition-open { overflow:hidden; }
 
 
 
-/* === MOBILE REBUILD V4 === */
+/* === MOBILE OVERLAY REBUILD === */
 @media (max-width: 860px) {
-  .compact-topbar {
-    padding: 8px 8px 10px;
+  body.mobile-ui .app-shell {
+    width: min(100%, calc(100% - 12px));
+    padding: 8px 0 14px;
   }
-  .compact-topbar .brand-kicker {
-    font-size: 10px;
-  }
-  .compact-rail {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .resource-chip {
-    min-height: 50px;
-    padding: 8px;
-    border-radius: 14px;
-  }
-  .resource-chip span {
-    font-size: 10px;
-    margin-bottom: 4px;
-  }
-  .resource-chip strong {
-    font-size: 15px;
-  }
-
-  .battle-layout {
-    display: block;
-  }
-  .battle-panel,
-  .mobile-card,
-  .mobile-tabs-panel {
-    display: none;
-  }
-  .battle-panel.active-mobile-screen,
-  .mobile-card.active-mobile-screen,
-  .mobile-tabs-panel.active-mobile-screen {
-    display: block;
-  }
-
-  .battle-panel {
+  body.mobile-ui .hud-top {
     padding: 10px;
-    border-radius: 20px;
-  }
-  .battle-headline-tight {
-    gap: 8px;
-  }
-  .battle-headline h2 {
-    font-size: 24px;
-    margin: 4px 0 2px;
-  }
-  .enemy-flavor {
-    font-size: 13px;
-    line-height: 1.35;
-  }
-  .compact-counters {
-    gap: 8px;
-  }
-  .counter-box {
-    min-width: 0;
-    padding: 10px 12px;
-  }
-  .counter-box span {
-    font-size: 10px;
-    margin-bottom: 4px;
-  }
-  .counter-box strong {
-    font-size: 16px;
-  }
-
-  .wave-panel {
-    margin-bottom: 10px;
-    padding: 10px 12px;
-  }
-  .wave-panel-top {
-    gap: 8px;
-  }
-  .wave-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .wave-actions .ghost-btn,
-  .wave-actions .primary-btn {
-    min-height: 42px;
-    padding: 0 10px;
-  }
-
-  .arena-bars.compact-bars {
-    padding: 10px 12px;
-  }
-  .arena-bars .bar-meta span {
-    font-size: 10px;
-  }
-  .arena-bars .bar-meta strong {
-    font-size: 13px;
-  }
-  .hp-bar,
-  .shield-bar,
-  .swipe-meter {
-    height: 12px;
-  }
-  .arena-stack-centered {
     gap: 10px;
-  }
-  .enemy-wrap {
-    min-height: min(38vh, 360px);
-    border-radius: 22px;
-    touch-action: none;
-  }
-  .enemy-glyph,
-  #enemy-image {
-    max-height: 220px;
-  }
-
-  .mobile-card,
-  .mobile-tabs-panel {
-    padding: 10px;
-    border-radius: 20px;
-  }
-  .mobile-card .section-topline,
-  .mobile-tabs-panel .section-topline,
-  .mobile-tabs-panel .tab-header-row {
-    gap: 8px;
-  }
-  .mobile-card h3,
-  .mobile-tabs-panel h3 {
-    font-size: 19px;
-  }
-  .mobile-stats-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-  }
-  .mobile-stats-strip .mini-stat {
-    padding: 8px 10px;
-    border-radius: 14px;
-  }
-  .mobile-stats-strip .mini-stat span {
-    font-size: 9px;
-    margin-bottom: 4px;
-  }
-  .mobile-stats-strip .mini-stat strong {
-    font-size: 13px;
-  }
-
-  .active-heroes-dock {
-    display: grid;
-    gap: 8px;
     margin-bottom: 10px;
   }
-  .active-squad {
-    gap: 8px;
-  }
-  .active-hero-card {
-    padding: 10px;
-    border-radius: 16px;
-  }
-  .heroes-roster {
-    display: grid;
-    gap: 8px;
-    max-height: none;
-    overflow: visible;
-  }
-  .hero-card {
-    grid-template-columns: 52px minmax(0,1fr);
-    gap: 10px;
-    padding: 10px;
-    border-radius: 16px;
-  }
-  .hero-avatar {
-    width: 52px;
-    height: 52px;
-  }
-  .hero-name-row {
-    gap: 6px;
-  }
-  .hero-name-row strong {
-    font-size: 15px;
-  }
-  .hero-desc,
-  .hero-passive,
-  .hero-next-bonus {
-    font-size: 12px;
-    line-height: 1.35;
-  }
-  .hero-actions {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .hero-actions button {
-    min-height: 40px;
-    padding: 0 10px;
-  }
-
-  .mobile-tabs-panel .tabs-head {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin-bottom: 10px;
-    position: static;
-    background: transparent;
-    backdrop-filter: none;
-  }
-  .mobile-tabs-panel .tab-btn {
-    min-height: 40px;
-    padding: 0 8px;
-    font-size: 12px;
-  }
-  .mobile-tabs-panel .tab-section {
-    max-height: none;
-    overflow: visible;
-  }
-  .top-inline-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .top-inline-grid .stretch {
-    grid-column: 1 / -1;
-  }
-  .leaderboard-list,
-  .achievements-list,
-  .blessings-list {
-    gap: 8px;
-  }
-
-  .mobile-bottom-nav {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    padding: 8px;
-  }
-  .mobile-bottom-nav .screen-btn {
-    min-height: 46px;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.08);
-    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    color: var(--text);
-    font: inherit;
-    font-weight: 800;
-    font-size: 12px;
-  }
-  .mobile-bottom-nav .screen-btn.active {
-    background: linear-gradient(180deg, rgba(111,176,255,0.24), rgba(111,176,255,0.08));
-    border-color: rgba(111,176,255,0.3);
-  }
+  body.mobile-ui .brand-subline { display: none; }
+  body.mobile-ui .brand-title-row { gap: 10px; margin: 6px 0 6px; }
+  body.mobile-ui .brand-title-row h1 { font-size: clamp(24px, 6vw, 30px); }
+  body.mobile-ui .resource-rail { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  body.mobile-ui .resource-chip { min-height: 58px; padding: 10px 8px; border-radius: 14px; }
+  body.mobile-ui .resource-chip strong { font-size: 18px; }
+  body.mobile-ui .resource-chip span { margin-bottom: 5px; font-size: 10px; }
+  body.mobile-ui .left-column { display: none !important; }
+  body.mobile-ui .battle-layout { display: block; }
+  body.mobile-ui .center-column { min-width: 0; }
+  body.mobile-ui .battle-panel { padding: 12px; border-radius: 22px; }
+  body.mobile-ui .battle-headline { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 10px; }
+  body.mobile-ui .battle-headline h2 { font-size: clamp(24px, 6.5vw, 30px); margin: 6px 0 4px; }
+  body.mobile-ui .battle-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  body.mobile-ui .counter-box { min-width: 0; }
+  body.mobile-ui .wave-panel,
+  body.mobile-ui .boss-mechanic,
+  body.mobile-ui .arena-bars,
+  body.mobile-ui .mobile-card,
+  body.mobile-ui .mobile-overlay-hub { padding: 12px; }
+  body.mobile-ui .enemy-wrap { min-height: 38vh; border-radius: 24px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  body.mobile-ui .mobile-stack { display: grid; gap: 10px; margin-top: 10px; }
+  body.mobile-ui .mobile-stack > .squad-hud,
+  body.mobile-ui .mobile-stack > .side-tabs-panel,
+  body.mobile-ui .mobile-bottom-nav { display: none !important; }
+  body.mobile-ui .mobile-overlay-hub { display: block; }
+  body.mobile-ui .mobile-overlay-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+  body.mobile-ui .mobile-overlay-btn { min-height: 44px; padding: 0 8px; font-size: 13px; }
+  body.mobile-ui .mobile-overlay { position: fixed; inset: 0; z-index: 140; display: flex; align-items: flex-end; justify-content: center; padding: 10px; }
+  body.mobile-ui .mobile-overlay.hidden { display: none !important; }
+  body.mobile-ui .mobile-overlay-backdrop { position: absolute; inset: 0; background: rgba(4, 8, 18, 0.8); backdrop-filter: blur(6px); }
+  body.mobile-ui .mobile-overlay-sheet { position: relative; width: min(100%, 580px); max-height: min(86vh, 920px); padding: 14px; border-radius: 24px; display: flex; flex-direction: column; overflow: hidden; }
+  body.mobile-ui .mobile-overlay-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  body.mobile-ui .mobile-overlay-head h3 { font-size: 22px; }
+  body.mobile-ui .mobile-overlay-close { min-width: 42px; min-height: 42px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)); color: var(--text); font-size: 18px; font-weight: 800; }
+  body.mobile-ui .mobile-overlay-body { min-height: 0; overflow: auto; padding-right: 2px; }
+  body.mobile-ui .mobile-overlay-body .squad-hud,
+  body.mobile-ui .mobile-overlay-body .side-tabs-panel { display: block !important; padding: 0; border: 0; box-shadow: none; background: transparent; backdrop-filter: none; }
+  body.mobile-ui .mobile-overlay-body .tabs-head { position: sticky; top: 0; z-index: 2; padding-bottom: 10px; background: linear-gradient(180deg, rgba(10,18,35,0.96), rgba(10,18,35,0.76)); }
+  body.mobile-ui .mobile-overlay-body .heroes-roster,
+  body.mobile-ui .mobile-overlay-body .leaderboard-list,
+  body.mobile-ui .mobile-overlay-body .achievements-list,
+  body.mobile-ui .mobile-overlay-body .blessings-list { max-height: none; }
+  body.mobile-ui.mobile-overlay-open { overflow: hidden; }
 }

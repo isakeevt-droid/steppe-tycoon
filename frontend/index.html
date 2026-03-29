@@ -106,7 +106,7 @@
       </aside>
 
       <section class="center-column">
-        <section class="battle-zone panel battle-panel" data-mobile-screen="battle">
+        <section class="battle-zone panel battle-panel">
           <div class="battle-headline battle-headline-tight">
             <div>
               <div class="label-row compact-row">
@@ -180,7 +180,7 @@
         </section>
 
         <section class="mobile-stack">
-          <section class="panel shaman-hud mobile-card mobile-only active" data-mobile-screen="battle">
+          <section class="panel shaman-hud mobile-card mobile-only">
             <div class="section-topline tight">
               <div>
                 <div class="mini-label">Ядро отряда</div>
@@ -195,7 +195,17 @@
             </div>
           </section>
 
-          <section class="panel squad-hud mobile-card" data-mobile-screen="heroes">
+          <section class="panel mobile-overlay-hub mobile-only">
+            <div class="mini-label">Быстрый доступ</div>
+            <div class="mobile-overlay-actions">
+              <button id="mobile-open-heroes" class="primary-btn mobile-overlay-btn" type="button">Шаманы</button>
+              <button id="mobile-open-top" class="secondary-btn mobile-overlay-btn" type="button">Прогресс</button>
+              <button id="mobile-open-rebirth" class="danger-btn mobile-overlay-btn" type="button">Перерождение</button>
+            </div>
+          </section>
+
+          <div id="mobile-heroes-panel-anchor"></div>
+          <section class="panel squad-hud mobile-card">
             <div class="section-topline tight">
               <div>
                 <div class="mini-label">Отряд</div>
@@ -206,7 +216,8 @@
             <div id="heroes-list" class="heroes-roster"></div>
           </section>
 
-          <section class="panel side-tabs-panel mobile-tabs-panel" data-mobile-screen="meta">
+          <div id="mobile-meta-panel-anchor"></div>
+          <section class="panel side-tabs-panel mobile-tabs-panel">
             <div class="tabs-head desktop-tabs-head">
               <button class="tab-btn active" data-tab="top">Топ</button>
               <button class="tab-btn" data-tab="achievements">Достижения</button>
@@ -258,11 +269,33 @@
 
     </main>
 
-    <nav class="mobile-bottom-nav panel mobile-only">
-      <button class="screen-btn active" data-screen="battle">Бой</button>
-      <button class="screen-btn" data-screen="heroes">Шаманы</button>
-      <button class="screen-btn" data-screen="meta">Топ / Дары</button>
-    </nav>
+    <div id="mobile-heroes-overlay" class="mobile-overlay mobile-only hidden" aria-hidden="true">
+      <div class="mobile-overlay-backdrop" data-mobile-overlay-close="heroes"></div>
+      <div class="mobile-overlay-sheet panel">
+        <div class="mobile-overlay-head">
+          <div>
+            <div class="mini-label">Круг шаманов</div>
+            <h3>Связка и прокачка</h3>
+          </div>
+          <button class="mobile-overlay-close" type="button" data-mobile-overlay-close="heroes">✕</button>
+        </div>
+        <div id="mobile-heroes-overlay-body" class="mobile-overlay-body"></div>
+      </div>
+    </div>
+
+    <div id="mobile-meta-overlay" class="mobile-overlay mobile-only hidden" aria-hidden="true">
+      <div class="mobile-overlay-backdrop" data-mobile-overlay-close="meta"></div>
+      <div class="mobile-overlay-sheet panel">
+        <div class="mobile-overlay-head">
+          <div>
+            <div class="mini-label">Степные записи</div>
+            <h3>Топ, достижения и перерождение</h3>
+          </div>
+          <button class="mobile-overlay-close" type="button" data-mobile-overlay-close="meta">✕</button>
+        </div>
+        <div id="mobile-meta-overlay-body" class="mobile-overlay-body"></div>
+      </div>
+    </div>
   </div>
 
 
