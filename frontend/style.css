@@ -1397,166 +1397,248 @@ body.wave-transition-open { overflow:hidden; }
 
 
 
-/* === MOBILE UX REWORK V3 === */
-.mobile-nav-shell { display: none; }
-.mobile-screen-hidden { display: none !important; }
-
+/* === MOBILE REBUILD V4 === */
 @media (max-width: 860px) {
-  .responsive-shell {
-    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-  }
-
   .compact-topbar {
-    gap: 10px;
-    padding: 10px;
+    padding: 8px 8px 10px;
   }
-
+  .compact-topbar .brand-kicker {
+    font-size: 10px;
+  }
   .compact-rail {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
   }
-
   .resource-chip {
-    min-height: 52px;
+    min-height: 50px;
     padding: 8px;
     border-radius: 14px;
   }
-
   .resource-chip span {
     font-size: 10px;
     margin-bottom: 4px;
-    letter-spacing: 0.05em;
   }
-
   .resource-chip strong {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .battle-layout {
     display: block;
   }
-
-  .center-column {
-    display: block;
-  }
-
   .battle-panel,
   .mobile-card,
   .mobile-tabs-panel {
+    display: none;
+  }
+  .battle-panel.active-mobile-screen,
+  .mobile-card.active-mobile-screen,
+  .mobile-tabs-panel.active-mobile-screen {
+    display: block;
+  }
+
+  .battle-panel {
     padding: 10px;
-    border-radius: 18px;
-    margin-bottom: 10px;
-  }
-
-  .battle-headline-tight h2 {
-    font-size: 24px;
-    line-height: 1.05;
-  }
-
-  .enemy-wrap {
-    min-height: min(36vh, 340px);
     border-radius: 20px;
-    touch-action: none;
   }
-
-  .enemy-glyph,
-  #enemy-image {
-    max-height: 210px;
+  .battle-headline-tight {
+    gap: 8px;
   }
-
-  .counter-box,
-  .mini-stat,
-  .info-card,
-  .combo-card {
-    padding: 10px;
-    border-radius: 14px;
-    min-height: 0;
+  .battle-headline h2 {
+    font-size: 24px;
+    margin: 4px 0 2px;
   }
-
-  .counter-box strong,
-  .mini-stat strong,
-  .info-card strong {
+  .enemy-flavor {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  .compact-counters {
+    gap: 8px;
+  }
+  .counter-box {
+    min-width: 0;
+    padding: 10px 12px;
+  }
+  .counter-box span {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .counter-box strong {
     font-size: 16px;
   }
 
-  .battle-counters.compact-counters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .wave-panel {
+    margin-bottom: 10px;
+    padding: 10px 12px;
   }
-
+  .wave-panel-top {
+    gap: 8px;
+  }
   .wave-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
-
   .wave-actions .ghost-btn,
   .wave-actions .primary-btn {
-    min-width: 0;
-    width: 100%;
+    min-height: 42px;
+    padding: 0 10px;
   }
 
+  .arena-bars.compact-bars {
+    padding: 10px 12px;
+  }
+  .arena-bars .bar-meta span {
+    font-size: 10px;
+  }
+  .arena-bars .bar-meta strong {
+    font-size: 13px;
+  }
+  .hp-bar,
+  .shield-bar,
+  .swipe-meter {
+    height: 12px;
+  }
+  .arena-stack-centered {
+    gap: 10px;
+  }
+  .enemy-wrap {
+    min-height: min(38vh, 360px);
+    border-radius: 22px;
+    touch-action: none;
+  }
+  .enemy-glyph,
+  #enemy-image {
+    max-height: 220px;
+  }
+
+  .mobile-card,
+  .mobile-tabs-panel {
+    padding: 10px;
+    border-radius: 20px;
+  }
+  .mobile-card .section-topline,
+  .mobile-tabs-panel .section-topline,
+  .mobile-tabs-panel .tab-header-row {
+    gap: 8px;
+  }
+  .mobile-card h3,
+  .mobile-tabs-panel h3 {
+    font-size: 19px;
+  }
   .mobile-stats-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .mobile-stats-strip .mini-stat {
+    padding: 8px 10px;
+    border-radius: 14px;
+  }
+  .mobile-stats-strip .mini-stat span {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+  .mobile-stats-strip .mini-stat strong {
+    font-size: 13px;
   }
 
+  .active-heroes-dock {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .active-squad {
+    gap: 8px;
+  }
+  .active-hero-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
   .heroes-roster {
+    display: grid;
     gap: 8px;
     max-height: none;
     overflow: visible;
   }
-
   .hero-card {
+    grid-template-columns: 52px minmax(0,1fr);
     gap: 10px;
     padding: 10px;
+    border-radius: 16px;
   }
-
+  .hero-avatar {
+    width: 52px;
+    height: 52px;
+  }
+  .hero-name-row {
+    gap: 6px;
+  }
+  .hero-name-row strong {
+    font-size: 15px;
+  }
+  .hero-desc,
+  .hero-passive,
+  .hero-next-bonus {
+    font-size: 12px;
+    line-height: 1.35;
+  }
   .hero-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .hero-actions button {
+    min-height: 40px;
+    padding: 0 10px;
   }
 
-  .mobile-tabs-panel,
-  .squad-hud.mobile-card {
-    max-height: calc(100vh - 190px);
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+  .mobile-tabs-panel .tabs-head {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 10px;
+    position: static;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  .mobile-tabs-panel .tab-btn {
+    min-height: 40px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .mobile-tabs-panel .tab-section {
+    max-height: none;
+    overflow: visible;
+  }
+  .top-inline-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .top-inline-grid .stretch {
+    grid-column: 1 / -1;
+  }
+  .leaderboard-list,
+  .achievements-list,
+  .blessings-list {
+    gap: 8px;
   }
 
-  .mobile-nav-shell {
-    position: fixed;
-    left: 8px;
-    right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-    z-index: 60;
+  .mobile-bottom-nav {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding: 8px;
-    border-radius: 18px;
-    background: linear-gradient(180deg, rgba(10,18,35,0.96), rgba(8,14,28,0.96));
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
-    backdrop-filter: blur(12px);
   }
-
-  .mobile-nav-btn {
-    min-height: 48px;
-    border: 1px solid rgba(255,255,255,0.08);
+  .mobile-bottom-nav .screen-btn {
+    min-height: 46px;
     border-radius: 14px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
     color: var(--text);
+    font: inherit;
     font-weight: 800;
-    font-size: 13px;
-    cursor: pointer;
+    font-size: 12px;
   }
-
-  .mobile-nav-btn.active {
-    color: #08111e;
-    background: linear-gradient(180deg, #9bd6ff, #69afff);
-    box-shadow: 0 8px 18px rgba(78,148,255,0.22);
-  }
-}
-
-@media (min-width: 861px) {
-  .mobile-nav-shell {
-    display: none !important;
+  .mobile-bottom-nav .screen-btn.active {
+    background: linear-gradient(180deg, rgba(111,176,255,0.24), rgba(111,176,255,0.08));
+    border-color: rgba(111,176,255,0.3);
   }
 }

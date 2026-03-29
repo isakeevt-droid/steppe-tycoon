@@ -110,7 +110,9 @@ const els = {
   waveTransitionStopBtn: $('wave-transition-stop-btn'),
 };
 
-const tabButtons = bySelectorAll('.tab-btn');
+const tabButtons = bySelectorAll('.tabs-head .tab-btn');
+const mobileScreenButtons = bySelectorAll('.mobile-bottom-nav .screen-btn');
+const mobileScreens = bySelectorAll('[data-mobile-screen]');
 const tabPanels = bySelectorAll('.tab-section');
 const ELEMENTAL_FX_CLASSES = ['fx-fire-wind', 'fx-storm', 'fx-lava', 'fx-sand', 'fx-mud', 'fx-steam', 'fx-fire', 'fx-water', 'fx-wind', 'fx-earth', 'fx-arcane', 'fx-shadow'];
 const SWIPE_MIN_DISTANCE = 42;
@@ -228,6 +230,13 @@ function activateTab(tab) {
 }
 
 tabButtons.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+function activateMobileScreen(screen) {
+  mobileScreenButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.screen === screen));
+  mobileScreens.forEach((panel) => panel.classList.toggle('active-mobile-screen', panel.dataset.mobileScreen === screen));
+}
+
+mobileScreenButtons.forEach((btn) => btn.addEventListener('click', () => activateMobileScreen(btn.dataset.screen)));
+
 
 function initTelegram() {
   const tg = window.Telegram?.WebApp || null;
@@ -1054,13 +1063,10 @@ function applyViewportMode() {
   const isMobile = window.innerWidth <= 860;
   document.body.classList.toggle('mobile-ui', isMobile);
   document.body.classList.toggle('desktop-ui', !isMobile);
-  ensureMobileNav();
-  if (!isMobile) {
-    setMobileScreen('fight');
-    return;
-  }
-  setMobileScreen(mobileScreen || 'fight');
+  if (isMobile) activateMobileScreen('battle');
+  else mobileScreens.forEach((panel) => panel.classList.remove('active-mobile-screen'));
 }
+
 
 function setState(next) {
   if (!next || typeof next !== 'object') {
@@ -1532,53 +1538,3 @@ window.addEventListener('resize', applyViewportMode);
 applyViewportMode();
 
 boot();
-
-
-/* === MOBILE UX REWORK V3 === */
-let mobileScreen = 'fight';
-
-function mobileSections() {
-  return {
-    fight: [
-      document.querySelector('.center-column .battle-panel'),
-      document.querySelector('.mobile-stack .shaman-hud.mobile-card.mobile-only')
-    ].filter(Boolean),
-    shamans: [
-      document.querySelector('.mobile-stack .squad-hud.mobile-card')
-    ].filter(Boolean),
-    meta: [
-      document.querySelector('.mobile-stack .mobile-tabs-panel')
-    ].filter(Boolean),
-  };
-}
-
-function ensureMobileNav() {
-  if (document.querySelector('.mobile-nav-shell')) return;
-  const shell = document.createElement('div');
-  shell.className = 'mobile-nav-shell';
-  shell.innerHTML = `
-    <button type="button" class="mobile-nav-btn active" data-mobile-screen="fight">Бой</button>
-    <button type="button" class="mobile-nav-btn" data-mobile-screen="shamans">Шаманы</button>
-    <button type="button" class="mobile-nav-btn" data-mobile-screen="meta">Топ-Дары</button>
-  `;
-  document.body.appendChild(shell);
-  shell.querySelectorAll('[data-mobile-screen]').forEach((btn) => {
-    btn.addEventListener('click', () => setMobileScreen(btn.dataset.mobileScreen));
-  });
-}
-
-function setMobileScreen(screen) {
-  mobileScreen = screen || 'fight';
-  const isMobile = window.innerWidth <= 860;
-  const sections = mobileSections();
-
-  Object.entries(sections).forEach(([key, nodes]) => {
-    nodes.forEach((node) => {
-      node.classList.toggle('mobile-screen-hidden', isMobile && key !== mobileScreen);
-    });
-  });
-
-  document.querySelectorAll('.mobile-nav-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.dataset.mobileScreen === mobileScreen);
-  });
-}

@@ -106,7 +106,7 @@
       </aside>
 
       <section class="center-column">
-        <section class="battle-zone panel battle-panel">
+        <section class="battle-zone panel battle-panel" data-mobile-screen="battle">
           <div class="battle-headline battle-headline-tight">
             <div>
               <div class="label-row compact-row">
@@ -180,7 +180,7 @@
         </section>
 
         <section class="mobile-stack">
-          <section class="panel shaman-hud mobile-card mobile-only">
+          <section class="panel shaman-hud mobile-card mobile-only active" data-mobile-screen="battle">
             <div class="section-topline tight">
               <div>
                 <div class="mini-label">Ядро отряда</div>
@@ -195,7 +195,7 @@
             </div>
           </section>
 
-          <section class="panel squad-hud mobile-card">
+          <section class="panel squad-hud mobile-card" data-mobile-screen="heroes">
             <div class="section-topline tight">
               <div>
                 <div class="mini-label">Отряд</div>
@@ -206,7 +206,7 @@
             <div id="heroes-list" class="heroes-roster"></div>
           </section>
 
-          <section class="panel side-tabs-panel mobile-tabs-panel">
+          <section class="panel side-tabs-panel mobile-tabs-panel" data-mobile-screen="meta">
             <div class="tabs-head desktop-tabs-head">
               <button class="tab-btn active" data-tab="top">Топ</button>
               <button class="tab-btn" data-tab="achievements">Достижения</button>
@@ -259,9 +259,9 @@
     </main>
 
     <nav class="mobile-bottom-nav panel mobile-only">
-      <button class="tab-btn active" data-tab="top">Топ</button>
-      <button class="tab-btn" data-tab="achievements">Достижения</button>
-      <button class="tab-btn" data-tab="rebirth">Перерождение</button>
+      <button class="screen-btn active" data-screen="battle">Бой</button>
+      <button class="screen-btn" data-screen="heroes">Шаманы</button>
+      <button class="screen-btn" data-screen="meta">Топ / Дары</button>
     </nav>
   </div>
 
