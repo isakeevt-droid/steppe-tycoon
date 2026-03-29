@@ -282,7 +282,7 @@ function clearElementalFx() {
 function pulseEnemy(effectClass = '', source = 'tap') {
   if (!els.enemyWrap) return;
   clearElementalFx();
-  void els.enemyWrap.offsetWidth;
+  
   els.enemyWrap.classList.add(source === 'hold' ? 'hold-pulse' : 'tap-pulse');
   if (effectClass) els.enemyWrap.classList.add(effectClass);
   clearTimeout(swipeFxTimer);
@@ -300,7 +300,7 @@ function playPointBurst(clientX, clientY, className = '') {
   const { x, y } = pointFromClient(clientX, clientY);
 
   els.enemyWrap.classList.remove('hit');
-  void els.enemyWrap.offsetWidth;
+  
   els.enemyWrap.classList.add('hit');
 
   const spark = document.createElement('div');
@@ -421,7 +421,7 @@ function createTrailSpark(x, y, style, effectClass) {
 function drawSwipeTrail(direction, effectClass = 'fx-basic', comboName = '', gesture = null) {
   if (!els.enemyWrap || !els.swipeTrailLayer) return;
   clearElementalFx();
-  void els.enemyWrap.offsetWidth;
+  
   els.enemyWrap.classList.add(`swipe-${direction}`);
   if (effectClass) els.enemyWrap.classList.add(effectClass);
   if (comboName) els.enemyWrap.classList.add('combo-active');
@@ -449,7 +449,7 @@ function drawSwipeTrail(direction, effectClass = 'fx-basic', comboName = '', ges
 function triggerEnemyEnter() {
   if (!els.enemyWrap) return;
   els.enemyWrap.classList.remove('enemy-enter');
-  void els.enemyWrap.offsetWidth;
+  
   els.enemyWrap.classList.add('enemy-enter');
   setTimeout(() => els.enemyWrap?.classList.remove('enemy-enter'), 280);
 }
@@ -1525,3 +1525,19 @@ window.addEventListener('resize', applyViewportMode);
 applyViewportMode();
 
 boot();
+
+
+// === TOUCH FALLBACK ===
+if (els.enemyWrap) {
+  els.enemyWrap.addEventListener('touchstart', (e) => {
+    if (e.touches[0]) onPointerDown(e.touches[0]);
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchmove', (e) => {
+    if (e.touches[0]) onPointerMove(e.touches[0]);
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchend', (e) => {
+    onPointerUp(e.changedTouches[0] || e);
+  }, { passive: false });
+}

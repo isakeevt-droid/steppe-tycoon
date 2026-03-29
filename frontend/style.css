@@ -1395,3 +1395,19 @@ body.wave-transition-open { overflow:hidden; }
   }
 }
 
+
+
+/* === MOBILE FIXES === */
+@media (max-width: 768px) {
+
+  .panel,
+  .panel-lite {
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+  }
+
+  .enemy-wrap {
+    touch-action: none;
+  }
+
+}
