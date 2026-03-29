@@ -1397,153 +1397,166 @@ body.wave-transition-open { overflow:hidden; }
 
 
 
-/* === Mobile gameplay + tabs fix === */
-.enemy-wrap {
-  touch-action: none;
-  overscroll-behavior: contain;
-}
+/* === MOBILE UX REWORK V3 === */
+.mobile-nav-shell { display: none; }
+.mobile-screen-hidden { display: none !important; }
 
 @media (max-width: 860px) {
-  body.mobile-ui,
-  body.mobile-ui html {
-    overflow: hidden;
+  .responsive-shell {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   }
 
-  body.mobile-ui {
-    height: 100dvh;
+  .compact-topbar {
+    gap: 10px;
+    padding: 10px;
   }
 
-  body.mobile-ui .app-shell.responsive-shell {
-    width: min(100%, calc(100% - 10px));
-    height: 100dvh;
-    padding-bottom: 74px;
-    overflow: hidden;
-  }
-
-  body.mobile-ui .compact-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    margin-bottom: 10px;
-  }
-
-  body.mobile-ui .compact-rail {
+  .compact-rail {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  body.mobile-ui .battle-layout {
-    display: block;
-    height: calc(100dvh - 176px);
-    overflow: hidden;
+  .resource-chip {
+    min-height: 52px;
+    padding: 8px;
+    border-radius: 14px;
   }
 
-  body.mobile-ui .center-column {
-    height: 100%;
-    display: block;
+  .resource-chip span {
+    font-size: 10px;
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
   }
 
-  body.mobile-ui .battle-panel,
-  body.mobile-ui .mobile-stack > .panel {
-    display: none !important;
+  .resource-chip strong {
+    font-size: 16px;
   }
 
-  body.mobile-ui .battle-panel.mobile-screen-active,
-  body.mobile-ui .mobile-stack > .panel.mobile-screen-active {
-    display: grid !important;
-  }
-
-  body.mobile-ui .battle-panel.mobile-screen-active,
-  body.mobile-ui .mobile-stack > .panel.mobile-screen-active {
-    height: 100%;
-    overflow: auto;
-    align-content: start;
-    gap: 10px;
-    padding-bottom: 12px;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-
-  body.mobile-ui .battle-panel.mobile-screen-active {
-    grid-auto-rows: min-content;
-  }
-
-  body.mobile-ui .mobile-stack {
-    height: 100%;
+  .battle-layout {
     display: block;
   }
 
-  body.mobile-ui .mobile-card.mobile-only.mobile-screen-active {
+  .center-column {
+    display: block;
+  }
+
+  .battle-panel,
+  .mobile-card,
+  .mobile-tabs-panel {
+    padding: 10px;
+    border-radius: 18px;
     margin-bottom: 10px;
   }
 
-  body.mobile-ui .mobile-tabs-panel.mobile-screen-active .tabs-head {
+  .battle-headline-tight h2 {
+    font-size: 24px;
+    line-height: 1.05;
+  }
+
+  .enemy-wrap {
+    min-height: min(36vh, 340px);
+    border-radius: 20px;
+    touch-action: none;
+  }
+
+  .enemy-glyph,
+  #enemy-image {
+    max-height: 210px;
+  }
+
+  .counter-box,
+  .mini-stat,
+  .info-card,
+  .combo-card {
+    padding: 10px;
+    border-radius: 14px;
+    min-height: 0;
+  }
+
+  .counter-box strong,
+  .mini-stat strong,
+  .info-card strong {
+    font-size: 16px;
+  }
+
+  .battle-counters.compact-counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wave-actions {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    margin-bottom: 10px;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: linear-gradient(180deg, rgba(18, 28, 54, 0.98), rgba(10, 18, 35, 0.96));
-    padding-bottom: 4px;
+    grid-template-columns: 1fr 1fr;
   }
 
-  body.mobile-ui .mobile-tabs-panel.mobile-screen-active .tab-section {
+  .wave-actions .ghost-btn,
+  .wave-actions .primary-btn {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .mobile-stats-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .heroes-roster {
+    gap: 8px;
     max-height: none;
     overflow: visible;
   }
 
-  body.mobile-ui .mobile-bottom-nav {
+  .hero-card {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .hero-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tabs-panel,
+  .squad-hud.mobile-card {
+    max-height: calc(100vh - 190px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .mobile-nav-shell {
     position: fixed;
     left: 8px;
     right: 8px;
-    bottom: max(8px, env(safe-area-inset-bottom));
-    z-index: 40;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
     padding: 8px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(10,18,35,0.96), rgba(8,14,28,0.96));
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+    backdrop-filter: blur(12px);
   }
 
-  body.mobile-ui .mobile-nav-btn {
-    appearance: none;
+  .mobile-nav-btn {
+    min-height: 48px;
     border: 1px solid rgba(255,255,255,0.08);
-    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-    color: var(--text);
-    min-height: 46px;
     border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+    color: var(--text);
     font-weight: 800;
     font-size: 13px;
+    cursor: pointer;
   }
 
-  body.mobile-ui .mobile-nav-btn.active {
-    background: linear-gradient(180deg, rgba(111,176,255,0.24), rgba(111,176,255,0.08));
-    border-color: rgba(111,176,255,0.3);
+  .mobile-nav-btn.active {
+    color: #08111e;
+    background: linear-gradient(180deg, #9bd6ff, #69afff);
+    box-shadow: 0 8px 18px rgba(78,148,255,0.22);
   }
+}
 
-  body.mobile-ui .panel,
-  body.mobile-ui .panel-lite {
-    backdrop-filter: none;
-    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
-  }
-
-  body.mobile-ui .enemy-wrap {
-    min-height: min(36vh, 320px);
-  }
-
-  body.mobile-ui .enemy-glyph,
-  body.mobile-ui #enemy-image {
-    max-height: 210px;
-  }
-
-  body.mobile-ui .resource-chip {
-    min-height: 56px;
-    padding: 10px 10px;
-  }
-
-  body.mobile-ui .resource-chip strong {
-    font-size: 18px;
+@media (min-width: 861px) {
+  .mobile-nav-shell {
+    display: none !important;
   }
 }
