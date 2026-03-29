@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Степной Шаман</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/style.css?v=20260327-responsive-ui">
+  <link rel="stylesheet" href="style.css?v=20260330-smartphone-ui">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
@@ -17,7 +17,7 @@
           <h1>Степной Шаман</h1>
           <div class="boss-pill"><span id="enemy-type">Обычный замес</span></div>
         </div>
-        <div class="brand-subline">Жоска тыкаешь картинки, а еще свайп нада делат и hold знайшь?тогда вперед.</div>
+        <div class="brand-subline">Верховный шаман держит центр. Шаманы стихий дают связки. Боссов вскрывай тапом, свайпом и hold.</div>
       </div>
 
       <div class="resource-rail compact-rail">
@@ -44,7 +44,7 @@
 
           <div class="shaman-core">
             <div class="shaman-portrait-wrap">
-              <img src="/assets/icons/high_shaman.png" alt="Верховный шаман" class="high-shaman-icon" id="high-shaman-icon">
+              <img src="assets/icons/high_shaman.png" alt="Верховный шаман" class="high-shaman-icon" id="high-shaman-icon">
               <div id="player-hit-float" class="player-hit-float hidden"></div>
               <div id="player-heal-float" class="player-heal-float hidden"></div>
             </div>
@@ -86,6 +86,21 @@
               <div class="swipe-meter"><div id="swipe-meter-fill" class="swipe-meter-fill"></div></div>
               <div id="swipe-combo-text" class="combo-copy">Собери рисунок и вскрой цель.</div>
               <div id="swipe-history" class="swipe-history"></div>
+            </div>
+
+            <div class="combo-card panel-lite">
+              <div class="combo-card-head">
+                <span>Hold</span>
+                <strong id="hold-name">Базовый канал</strong>
+              </div>
+              <div class="swipe-meter hold-meter"><div id="hold-meter-fill" class="swipe-meter-fill"></div></div>
+              <div id="hold-text" class="combo-copy">Вода и Земля усиливают hold.</div>
+              <div class="hold-tags">
+                <span class="tiny-chip">Канал: <strong id="hold-last-ms">0 мс</strong></span>
+                <span class="tiny-chip">Вода: <strong id="hold-water-state">Выкл</strong></span>
+                <span class="tiny-chip">Земля: <strong id="hold-earth-state">Выкл</strong></span>
+              </div>
+              <div id="hold-hint" class="combo-copy compact-copy">Копи и отпускай.</div>
             </div>
 
           </div>
@@ -192,6 +207,43 @@
               <div class="mini-stat"><span>HP</span><strong id="high-shaman-hp-mobile-mirror">Смотри слева</strong></div>
               <div class="mini-stat"><span>DPS</span><strong id="dps-mobile-mirror">Живёт в HUD</strong></div>
               <div class="mini-stat"><span>Def</span><strong id="def-mobile-mirror">Держим строй</strong></div>
+            </div>
+          </section>
+
+          <section class="panel combo-hud mobile-card mobile-only mobile-control-card">
+            <div class="section-topline tight">
+              <div>
+                <div class="mini-label">Жесты</div>
+                <h3 id="swipe-combo-name-mobile">Базовые жесты</h3>
+              </div>
+              <div id="swipe-hint-mobile" class="hint-pill">↑ ↓ ← →</div>
+            </div>
+
+            <div class="mobile-gesture-grid">
+              <div class="combo-card panel-lite">
+                <div class="combo-card-head">
+                  <span>Свайп</span>
+                  <strong>Комбо</strong>
+                </div>
+                <div class="swipe-meter"><div id="swipe-meter-fill-mobile" class="swipe-meter-fill"></div></div>
+                <div id="swipe-combo-text-mobile" class="combo-copy">Собери рисунок и вскрой цель.</div>
+                <div id="swipe-history-mobile" class="swipe-history"></div>
+              </div>
+
+              <div class="combo-card panel-lite">
+                <div class="combo-card-head">
+                  <span>Hold</span>
+                  <strong id="hold-name-mobile">Базовый канал</strong>
+                </div>
+                <div class="swipe-meter hold-meter"><div id="hold-meter-fill-mobile" class="swipe-meter-fill"></div></div>
+                <div id="hold-text-mobile" class="combo-copy">Вода и Земля усиливают hold.</div>
+                <div class="hold-tags">
+                  <span class="tiny-chip">Канал: <strong id="hold-last-ms-mobile">0 мс</strong></span>
+                  <span class="tiny-chip">Вода: <strong id="hold-water-state-mobile">Выкл</strong></span>
+                  <span class="tiny-chip">Земля: <strong id="hold-earth-state-mobile">Выкл</strong></span>
+                </div>
+                <div id="hold-hint-mobile" class="combo-copy compact-copy">Копи и отпускай.</div>
+              </div>
             </div>
           </section>
 
@@ -302,6 +354,6 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
-  <script src="/app.js?v=20260327-responsive-ui"></script>
+  <script src="app.js?v=20260330-smartphone-ui"></script>
 </body>
 </html>

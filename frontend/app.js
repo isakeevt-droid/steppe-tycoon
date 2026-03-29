@@ -114,6 +114,8 @@ const tabButtons = bySelectorAll('.tab-btn');
 const tabPanels = bySelectorAll('.tab-section');
 const ELEMENTAL_FX_CLASSES = ['fx-fire-wind', 'fx-storm', 'fx-lava', 'fx-sand', 'fx-mud', 'fx-steam', 'fx-fire', 'fx-water', 'fx-wind', 'fx-earth', 'fx-arcane', 'fx-shadow'];
 const SWIPE_MIN_DISTANCE = 42;
+const TAP_MOVE_TOLERANCE = 12;
+const HOLD_MOVE_TOLERANCE = 22;
 const HOLD_TRIGGER_MS = 240;
 const HOLD_MAX_MS = 2200;
 const POLL_INTERVAL_MS = 800;
@@ -166,6 +168,11 @@ function fmt(value) {
 }
 
 function setText(el, value) {
+  if (el) el.textContent = value;
+}
+
+function setTextById(id, value) {
+  const el = $(id);
   if (el) el.textContent = value;
 }
 
@@ -601,25 +608,43 @@ function renderSwipeHud(swipeState, lastHit = null) {
   const history = (lastHit && Array.isArray(lastHit.swipe_history) ? lastHit.swipe_history : swipeState?.history) || [];
   localSwipeHistory = history.slice(-4);
 
+  const historyHtml = localSwipeHistory.length
+    ? localSwipeHistory.map((item) => `<span class="swipe-history-chip">${directionLabel(item)}</span>`).join('')
+    : '<span class="swipe-history-chip muted">Жестов пока нет</span>';
+
   if (els.swipeHistory) {
-    if (localSwipeHistory.length) {
-      els.swipeHistory.innerHTML = localSwipeHistory.map((item) => `<span class="swipe-history-chip">${directionLabel(item)}</span>`).join('');
-    } else {
-      els.swipeHistory.innerHTML = '<span class="swipe-history-chip muted">Жестов пока нет</span>';
-    }
+    els.swipeHistory.innerHTML = historyHtml;
+  }
+  const mobileSwipeHistory = $('swipe-history-mobile');
+  if (mobileSwipeHistory) {
+    mobileSwipeHistory.innerHTML = historyHtml;
   }
 
   if (lastHit?.source === 'swipe') {
-    setText(els.swipeComboName, lastHit.combo_name || directionLabel(lastHit.swipe_direction));
-    setText(els.swipeComboText, lastHit.combo_effect || 'Одиночный направленный свайп.');
-    if (els.swipeMeterFill) els.swipeMeterFill.style.width = `${lastHit.combo_name ? 100 : 42}%`;
+    const title = lastHit.combo_name || directionLabel(lastHit.swipe_direction);
+    const text = lastHit.combo_effect || 'Одиночный направленный свайп.';
+    const width = `${lastHit.combo_name ? 100 : 42}%`;
+    setText(els.swipeComboName, title);
+    setTextById('swipe-combo-name-mobile', title);
+    setText(els.swipeComboText, text);
+    setTextById('swipe-combo-text-mobile', text);
+    if (els.swipeMeterFill) els.swipeMeterFill.style.width = width;
+    if ($('swipe-meter-fill-mobile')) $('swipe-meter-fill-mobile').style.width = width;
   } else {
-    setText(els.swipeComboName, pairLabel(swipeState?.pair_key || 'solo'));
-    setText(els.swipeComboText, 'Собери рисунок и вскрой цель.');
-    if (els.swipeMeterFill) els.swipeMeterFill.style.width = `${Math.min(100, localSwipeHistory.length * 24)}%`;
+    const title = pairLabel(swipeState?.pair_key || 'solo');
+    const text = 'Собери рисунок и вскрой цель.';
+    const width = `${Math.min(100, localSwipeHistory.length * 24)}%`;
+    setText(els.swipeComboName, title);
+    setTextById('swipe-combo-name-mobile', title);
+    setText(els.swipeComboText, text);
+    setTextById('swipe-combo-text-mobile', text);
+    if (els.swipeMeterFill) els.swipeMeterFill.style.width = width;
+    if ($('swipe-meter-fill-mobile')) $('swipe-meter-fill-mobile').style.width = width;
   }
 
-  setText(els.swipeHint, `${pairLabel(swipeState?.pair_key || 'solo')}`);
+  const hint = `${pairLabel(swipeState?.pair_key || 'solo')}`;
+  setText(els.swipeHint, hint);
+  setTextById('swipe-hint-mobile', hint);
 }
 
 function renderHoldHud(holdState, lastHit = null) {
@@ -1051,8 +1076,14 @@ async function confirmRebirth(path) {
 }
 
 function applyViewportMode() {
-  document.body.classList.toggle('mobile-ui', window.innerWidth <= 860);
-  document.body.classList.toggle('desktop-ui', window.innerWidth > 860);
+  const isMobile = window.innerWidth <= 860;
+  document.body.classList.toggle('mobile-ui', isMobile);
+  document.body.classList.toggle('desktop-ui', !isMobile);
+  if (isMobile) {
+    document.documentElement.style.setProperty('--tg-touch-mode', '1');
+  } else {
+    document.documentElement.style.removeProperty('--tg-touch-mode');
+  }
 }
 
 function setState(next) {
@@ -1386,8 +1417,15 @@ function resetPointer(event) {
   clearHoldVisual();
 }
 
+function pointerDistance(event) {
+  const dx = event.clientX - pointerState.startX;
+  const dy = event.clientY - pointerState.startY;
+  return { dx, dy, distance: Math.hypot(dx, dy) };
+}
+
 function onPointerDown(event) {
   if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (event.cancelable) event.preventDefault();
   pointerState = {
     active: true,
     pointerId: event.pointerId,
@@ -1401,20 +1439,25 @@ function onPointerDown(event) {
   };
   updateHoldVisual(event.clientX, event.clientY, 0);
   startHoldCharge();
-  els.enemyWrap?.setPointerCapture?.(event.pointerId);
+  try {
+    els.enemyWrap?.setPointerCapture?.(event.pointerId);
+  } catch (_) {}
 }
 
 function onPointerMove(event) {
   if (!pointerState.active || pointerState.pointerId !== event.pointerId) return;
+  if (event.cancelable && event.pointerType !== 'mouse') event.preventDefault();
   pointerState.lastX = event.clientX;
   pointerState.lastY = event.clientY;
-  const dx = event.clientX - pointerState.startX;
-  const dy = event.clientY - pointerState.startY;
-  if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+
+  const { distance } = pointerDistance(event);
+  if (distance > TAP_MOVE_TOLERANCE) {
     pointerState.moved = true;
   }
+
   const elapsed = Date.now() - pointerState.startedAt;
   updateHoldVisual(event.clientX, event.clientY, Math.max(0, Math.min(1, elapsed / HOLD_MAX_MS)));
+
   const last = pointerState.path[pointerState.path.length - 1];
   if (!last || Math.abs(last.x - event.clientX) > 6 || Math.abs(last.y - event.clientY) > 6) {
     pointerState.path.push({ x: event.clientX, y: event.clientY });
@@ -1423,6 +1466,7 @@ function onPointerMove(event) {
 
 async function onPointerUp(event) {
   if (!pointerState.active || pointerState.pointerId !== event.pointerId) return;
+  if (event.cancelable && event.pointerType !== 'mouse') event.preventDefault();
 
   const snapshot = {
     startX: pointerState.startX,
@@ -1433,21 +1477,20 @@ async function onPointerUp(event) {
     startedAt: pointerState.startedAt,
   };
 
-  const dx = event.clientX - pointerState.startX;
-  const dy = event.clientY - pointerState.startY;
+  const { dx, dy, distance } = pointerDistance(event);
   const elapsed = Date.now() - pointerState.startedAt;
   const direction = dominantDirection(dx, dy);
   const syntheticEvent = { clientX: event.clientX, clientY: event.clientY };
 
   resetPointer(event);
 
-  if (direction && (Math.abs(dx) > SWIPE_MIN_DISTANCE || Math.abs(dy) > SWIPE_MIN_DISTANCE)) {
+  if (direction && distance >= SWIPE_MIN_DISTANCE) {
     window.__lastSwipeGesture = snapshot;
     await swipeEnemy(direction, syntheticEvent);
     return;
   }
 
-  if (elapsed >= HOLD_TRIGGER_MS) {
+  if (elapsed >= HOLD_TRIGGER_MS && distance <= HOLD_MOVE_TOLERANCE) {
     await holdEnemy(elapsed, syntheticEvent);
     return;
   }
@@ -1460,10 +1503,11 @@ function onPointerCancel(event) {
 }
 
 if (els.enemyWrap) {
-  els.enemyWrap.addEventListener('pointerdown', onPointerDown);
-  els.enemyWrap.addEventListener('pointermove', onPointerMove);
-  els.enemyWrap.addEventListener('pointerup', onPointerUp);
-  els.enemyWrap.addEventListener('pointercancel', onPointerCancel);
+  els.enemyWrap.addEventListener('pointerdown', onPointerDown, { passive: false });
+  els.enemyWrap.addEventListener('pointermove', onPointerMove, { passive: false });
+  els.enemyWrap.addEventListener('pointerup', onPointerUp, { passive: false });
+  els.enemyWrap.addEventListener('pointercancel', onPointerCancel, { passive: true });
+  els.enemyWrap.addEventListener('lostpointercapture', onPointerCancel, { passive: true });
 }
 
 els.tapUpgradeBtn?.addEventListener('click', upgradeTap);
