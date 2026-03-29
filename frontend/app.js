@@ -110,8 +110,9 @@ const els = {
   waveTransitionStopBtn: $('wave-transition-stop-btn'),
 };
 
-const tabButtons = bySelectorAll('.tab-btn');
+const tabButtons = bySelectorAll('.tabs-head .tab-btn');
 const tabPanels = bySelectorAll('.tab-section');
+const mobileMainTabButtons = bySelectorAll('[data-mobile-tab]');
 const ELEMENTAL_FX_CLASSES = ['fx-fire-wind', 'fx-storm', 'fx-lava', 'fx-sand', 'fx-mud', 'fx-steam', 'fx-fire', 'fx-water', 'fx-wind', 'fx-earth', 'fx-arcane', 'fx-shadow'];
 const SWIPE_MIN_DISTANCE = 42;
 const HOLD_TRIGGER_MS = 240;
@@ -177,7 +178,6 @@ function showToast(text) {
   if (!els.toast) return;
   els.toast.textContent = text;
   els.toast.classList.remove('hidden');
-  void els.toast.offsetWidth;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
     els.toast?.classList.add('hidden');
@@ -228,6 +228,33 @@ function activateTab(tab) {
 }
 
 tabButtons.forEach((btn) => btn.addEventListener('click', () => activateTab(btn.dataset.tab)));
+
+
+let currentMobileMainTab = 'battle';
+
+function mobileScreenNodes() {
+  return {
+    battle: [document.querySelector('.battle-panel'), document.querySelector('.mobile-card.mobile-only')],
+    heroes: [document.querySelector('.squad-hud.mobile-card')],
+    meta: [document.querySelector('.mobile-tabs-panel')],
+  };
+}
+
+function activateMobileMainTab(tab) {
+  currentMobileMainTab = tab || 'battle';
+  const groups = mobileScreenNodes();
+  Object.entries(groups).forEach(([key, nodes]) => {
+    (nodes || []).forEach((node) => {
+      if (!node) return;
+      node.classList.toggle('mobile-screen-active', key === currentMobileMainTab);
+    });
+  });
+  mobileMainTabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mobileTab === currentMobileMainTab));
+}
+
+mobileMainTabButtons.forEach((btn) => {
+  btn.addEventListener('click', () => activateMobileMainTab(btn.dataset.mobileTab));
+});
 
 function initTelegram() {
   const tg = window.Telegram?.WebApp || null;
@@ -282,7 +309,6 @@ function clearElementalFx() {
 function pulseEnemy(effectClass = '', source = 'tap') {
   if (!els.enemyWrap) return;
   clearElementalFx();
-  
   els.enemyWrap.classList.add(source === 'hold' ? 'hold-pulse' : 'tap-pulse');
   if (effectClass) els.enemyWrap.classList.add(effectClass);
   clearTimeout(swipeFxTimer);
@@ -300,7 +326,6 @@ function playPointBurst(clientX, clientY, className = '') {
   const { x, y } = pointFromClient(clientX, clientY);
 
   els.enemyWrap.classList.remove('hit');
-  
   els.enemyWrap.classList.add('hit');
 
   const spark = document.createElement('div');
@@ -421,7 +446,6 @@ function createTrailSpark(x, y, style, effectClass) {
 function drawSwipeTrail(direction, effectClass = 'fx-basic', comboName = '', gesture = null) {
   if (!els.enemyWrap || !els.swipeTrailLayer) return;
   clearElementalFx();
-  
   els.enemyWrap.classList.add(`swipe-${direction}`);
   if (effectClass) els.enemyWrap.classList.add(effectClass);
   if (comboName) els.enemyWrap.classList.add('combo-active');
@@ -449,7 +473,6 @@ function drawSwipeTrail(direction, effectClass = 'fx-basic', comboName = '', ges
 function triggerEnemyEnter() {
   if (!els.enemyWrap) return;
   els.enemyWrap.classList.remove('enemy-enter');
-  
   els.enemyWrap.classList.add('enemy-enter');
   setTimeout(() => els.enemyWrap?.classList.remove('enemy-enter'), 280);
 }
@@ -1051,8 +1074,13 @@ async function confirmRebirth(path) {
 }
 
 function applyViewportMode() {
-  document.body.classList.toggle('mobile-ui', window.innerWidth <= 860);
-  document.body.classList.toggle('desktop-ui', window.innerWidth > 860);
+  const isMobile = window.innerWidth <= 860;
+  document.body.classList.toggle('mobile-ui', isMobile);
+  document.body.classList.toggle('desktop-ui', !isMobile);
+  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+  if (isMobile) {
+    activateMobileMainTab(currentMobileMainTab);
+  }
 }
 
 function setState(next) {
@@ -1386,7 +1414,15 @@ function resetPointer(event) {
   clearHoldVisual();
 }
 
+function isSamePointer(event) {
+  if (!pointerState.active) return false;
+  if (pointerState.pointerId == null) return true;
+  return pointerState.pointerId === event.pointerId;
+}
+
 function onPointerDown(event) {
+  if (event?.cancelable) event.preventDefault();
+
   if (event.pointerType === 'mouse' && event.button !== 0) return;
   pointerState = {
     active: true,
@@ -1401,11 +1437,12 @@ function onPointerDown(event) {
   };
   updateHoldVisual(event.clientX, event.clientY, 0);
   startHoldCharge();
-  els.enemyWrap?.setPointerCapture?.(event.pointerId);
+  if (event.pointerId != null) els.enemyWrap?.setPointerCapture?.(event.pointerId);
 }
 
 function onPointerMove(event) {
-  if (!pointerState.active || pointerState.pointerId !== event.pointerId) return;
+  if (event?.cancelable) event.preventDefault();
+  if (!pointerState.active || !isSamePointer(event)) return;
   pointerState.lastX = event.clientX;
   pointerState.lastY = event.clientY;
   const dx = event.clientX - pointerState.startX;
@@ -1422,7 +1459,8 @@ function onPointerMove(event) {
 }
 
 async function onPointerUp(event) {
-  if (!pointerState.active || pointerState.pointerId !== event.pointerId) return;
+  if (event?.cancelable) event.preventDefault();
+  if (!pointerState.active || !isSamePointer(event)) return;
 
   const snapshot = {
     startX: pointerState.startX,
@@ -1456,14 +1494,50 @@ async function onPointerUp(event) {
 }
 
 function onPointerCancel(event) {
+  if (event?.cancelable) event.preventDefault();
   resetPointer(event);
 }
 
+function touchPoint(touch) {
+  return {
+    clientX: touch.clientX,
+    clientY: touch.clientY,
+    pointerId: null,
+    pointerType: 'touch',
+    cancelable: true,
+    preventDefault() {},
+  };
+}
+
 if (els.enemyWrap) {
-  els.enemyWrap.addEventListener('pointerdown', onPointerDown);
-  els.enemyWrap.addEventListener('pointermove', onPointerMove);
-  els.enemyWrap.addEventListener('pointerup', onPointerUp);
-  els.enemyWrap.addEventListener('pointercancel', onPointerCancel);
+  els.enemyWrap.addEventListener('pointerdown', onPointerDown, { passive: false });
+  els.enemyWrap.addEventListener('pointermove', onPointerMove, { passive: false });
+  els.enemyWrap.addEventListener('pointerup', onPointerUp, { passive: false });
+  els.enemyWrap.addEventListener('pointercancel', onPointerCancel, { passive: false });
+
+  els.enemyWrap.addEventListener('touchstart', (event) => {
+    if (!event.touches.length) return;
+    event.preventDefault();
+    onPointerDown(touchPoint(event.touches[0]));
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchmove', (event) => {
+    if (!event.touches.length) return;
+    event.preventDefault();
+    onPointerMove(touchPoint(event.touches[0]));
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchend', (event) => {
+    const touch = event.changedTouches && event.changedTouches[0];
+    if (!touch) return;
+    event.preventDefault();
+    onPointerUp(touchPoint(touch));
+  }, { passive: false });
+
+  els.enemyWrap.addEventListener('touchcancel', (event) => {
+    event.preventDefault();
+    onPointerCancel(touchPoint({ clientX: pointerState.lastX, clientY: pointerState.lastY }));
+  }, { passive: false });
 }
 
 els.tapUpgradeBtn?.addEventListener('click', upgradeTap);
@@ -1522,22 +1596,8 @@ window.addEventListener('error', (event) => {
   console.error('page_error', event.error || event.message);
 });
 window.addEventListener('resize', applyViewportMode);
+window.addEventListener('orientationchange', applyViewportMode);
 applyViewportMode();
+activateMobileMainTab('battle');
 
 boot();
-
-
-// === TOUCH FALLBACK ===
-if (els.enemyWrap) {
-  els.enemyWrap.addEventListener('touchstart', (e) => {
-    if (e.touches[0]) onPointerDown(e.touches[0]);
-  }, { passive: false });
-
-  els.enemyWrap.addEventListener('touchmove', (e) => {
-    if (e.touches[0]) onPointerMove(e.touches[0]);
-  }, { passive: false });
-
-  els.enemyWrap.addEventListener('touchend', (e) => {
-    onPointerUp(e.changedTouches[0] || e);
-  }, { passive: false });
-}
