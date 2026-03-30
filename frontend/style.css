@@ -1453,3 +1453,135 @@ body.wave-transition-open { overflow:hidden; }
   body.mobile-ui .mobile-overlay-body .blessings-list { max-height: none; }
   body.mobile-ui.mobile-overlay-open { overflow: hidden; }
 }
+
+
+/* === MOBILE COMPACT HUD V6 === */
+@media (max-width: 860px) {
+  body.mobile-ui .resource-rail {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  body.mobile-ui .resource-chip {
+    min-height: 52px;
+    padding: 8px 6px;
+    border-radius: 12px;
+  }
+
+  body.mobile-ui .resource-chip strong {
+    font-size: 16px;
+  }
+
+  body.mobile-ui .resource-chip span {
+    font-size: 9px;
+    margin-bottom: 4px;
+  }
+
+  body.mobile-ui .battle-panel {
+    padding: 10px;
+  }
+
+  body.mobile-ui .battle-headline-mobile-compact {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  body.mobile-ui .label-row.compact-row {
+    gap: 8px;
+  }
+
+  body.mobile-ui .battle-headline h2 {
+    font-size: clamp(20px, 5.8vw, 26px);
+    margin: 4px 0 2px;
+    line-height: 1.05;
+  }
+
+  body.mobile-ui .enemy-flavor {
+    font-size: 12px;
+    line-height: 1.28;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  body.mobile-ui .battle-counters {
+    gap: 8px;
+  }
+
+  body.mobile-ui .counter-box {
+    padding: 10px 10px;
+    min-height: 58px;
+    border-radius: 14px;
+  }
+
+  body.mobile-ui .counter-box strong {
+    font-size: 18px;
+  }
+
+  body.mobile-ui .wave-panel,
+  body.mobile-ui .boss-mechanic,
+  body.mobile-ui .arena-bars,
+  body.mobile-ui .mobile-card,
+  body.mobile-ui .mobile-overlay-hub {
+    padding: 10px;
+  }
+
+  body.mobile-ui .boss-name {
+    font-size: 16px;
+  }
+
+  body.mobile-ui .boss-desc,
+  body.mobile-ui .boss-status {
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  body.mobile-ui .wave-actions {
+    gap: 8px;
+  }
+
+  body.mobile-ui .wave-actions .primary-btn,
+  body.mobile-ui .wave-actions .ghost-btn {
+    min-height: 42px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  body.mobile-ui .arena-stack-centered {
+    gap: 8px;
+  }
+
+  body.mobile-ui .compact-bars {
+    padding: 8px 10px;
+  }
+
+  body.mobile-ui .bar-meta {
+    margin-bottom: 6px;
+  }
+
+  body.mobile-ui .bar-meta span {
+    font-size: 10px;
+    margin-bottom: 0;
+  }
+
+  body.mobile-ui .bar-meta strong {
+    font-size: 12px;
+  }
+
+  body.mobile-ui .enemy-wrap {
+    min-height: 31vh;
+    max-height: 34vh;
+    border-radius: 20px;
+  }
+
+  body.mobile-ui .enemy-glyph,
+  body.mobile-ui #enemy-image {
+    max-height: 200px;
+  }
+
+  body.mobile-ui .mobile-stack {
+    gap: 8px;
+    margin-top: 8px;
+  }
+}
