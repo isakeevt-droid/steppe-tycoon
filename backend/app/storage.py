@@ -81,6 +81,59 @@ def verify_telegram_init_data(init_data: str) -> dict[str, Any] | None:
         return None
 
 
+def parse_telegram_user_header(raw_header: str) -> dict[str, Any] | None:
+    if not raw_header:
+        return None
+    try:
+        data = json.loads(raw_header)
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def migrate_guest_to_telegram(guest_id: str | None, identity: PlayerIdentity) -> None:
+    if not guest_id:
+        return
+    guest_player_id = f"guest:{(guest_id or '').strip()[:64] or 'guest-local'}"
+    if guest_player_id == identity.player_id:
+        return
+
+    with db_connect() as conn:
+        telegram_row = conn.execute(
+            "SELECT 1 FROM players WHERE player_id = ?",
+            (identity.player_id,),
+        ).fetchone()
+        if telegram_row is not None:
+            return
+
+        guest_row = conn.execute(
+            "SELECT * FROM players WHERE player_id = ?",
+            (guest_player_id,),
+        ).fetchone()
+        if guest_row is None:
+            return
+
+        conn.execute(
+            """
+            INSERT INTO players (player_id, display_name, username, is_telegram, state_json, best_score, best_stage, trophies, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(player_id) DO NOTHING
+            """,
+            (
+                identity.player_id,
+                identity.display_name,
+                identity.username,
+                1,
+                guest_row["state_json"],
+                int(guest_row["best_score"]),
+                int(guest_row["best_stage"]),
+                int(guest_row["trophies"]),
+                int(time.time()),
+            ),
+        )
+        conn.commit()
+
+
 def sanitize_identity(raw_user: dict[str, Any] | None, guest_id: str | None) -> PlayerIdentity:
     if raw_user and raw_user.get("id") is not None:
         first = str(raw_user.get("first_name", "") or "").strip()
@@ -98,18 +151,20 @@ def sanitize_identity(raw_user: dict[str, Any] | None, guest_id: str | None) -> 
 
 
 def get_identity(request: Request) -> PlayerIdentity:
+    guest_id = request.headers.get("X-Player-Id") or request.query_params.get("player_id")
     verified_user = verify_telegram_init_data(request.headers.get("X-Telegram-Init-Data", ""))
     if verified_user:
-        return sanitize_identity(verified_user, None)
-    raw_header = request.headers.get("X-Telegram-User", "")
-    raw_user = None
-    if raw_header:
-        try:
-            raw_user = json.loads(raw_header)
-        except Exception:
-            raw_user = None
-    guest_id = request.headers.get("X-Player-Id") or request.query_params.get("player_id")
-    return sanitize_identity(raw_user, guest_id)
+        identity = sanitize_identity(verified_user, None)
+        migrate_guest_to_telegram(guest_id, identity)
+        return identity
+
+    raw_user = parse_telegram_user_header(request.headers.get("X-Telegram-User", ""))
+    if raw_user and raw_user.get("id") is not None:
+        identity = sanitize_identity(raw_user, None)
+        migrate_guest_to_telegram(guest_id, identity)
+        return identity
+
+    return sanitize_identity(None, guest_id)
 
 
 def load_player_row(player_id: str) -> sqlite3.Row | None:

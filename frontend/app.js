@@ -124,12 +124,27 @@ let pollTimer = null;
 let toastTimer = null;
 let swipeFxTimer = null;
 let holdChargeTimer = null;
+const TELEGRAM_USER_CACHE_KEY = 'steppe_shaman_tg_user';
+const TELEGRAM_INIT_DATA_CACHE_KEY = 'steppe_shaman_tg_init_data';
+
 let telegramUser = null;
 let telegramInitData = '';
 let localSwipeHistory = [];
 let guestId = localStorage.getItem('steppe_shaman_guest_id') || `guest-${Math.random().toString(36).slice(2, 10)}`;
 
 localStorage.setItem('steppe_shaman_guest_id', guestId);
+
+try {
+  const cachedTelegramUser = localStorage.getItem(TELEGRAM_USER_CACHE_KEY);
+  if (cachedTelegramUser) telegramUser = JSON.parse(cachedTelegramUser);
+} catch (_) {
+  telegramUser = null;
+}
+try {
+  telegramInitData = sessionStorage.getItem(TELEGRAM_INIT_DATA_CACHE_KEY) || '';
+} catch (_) {
+  telegramInitData = '';
+}
 
 let pendingWaveAutoStart = false;
 
@@ -236,14 +251,29 @@ function initTelegram() {
     tg.ready();
     tg.expand();
   } catch (_) {}
-  telegramInitData = tg.initData || '';
-  telegramUser = tg.initDataUnsafe?.user || null;
+
+  const nextInitData = tg.initData || telegramInitData || '';
+  const nextTelegramUser = tg.initDataUnsafe?.user || telegramUser || null;
+
+  telegramInitData = nextInitData;
+  telegramUser = nextTelegramUser;
+
+  try {
+    if (telegramInitData) sessionStorage.setItem(TELEGRAM_INIT_DATA_CACHE_KEY, telegramInitData);
+  } catch (_) {}
+  try {
+    if (telegramUser) localStorage.setItem(TELEGRAM_USER_CACHE_KEY, JSON.stringify(telegramUser));
+  } catch (_) {}
 }
 
 function buildAuthHeaders() {
   const headers = { 'X-Player-Id': guestId };
-  if (telegramUser) headers['X-Telegram-User'] = JSON.stringify(telegramUser);
-  if (telegramInitData) headers['X-Telegram-Init-Data'] = telegramInitData;
+  const stableTelegramUser = telegramUser;
+  const stableTelegramInitData = telegramInitData;
+
+  if (stableTelegramUser) headers['X-Telegram-User'] = JSON.stringify(stableTelegramUser);
+  if (stableTelegramInitData) headers['X-Telegram-Init-Data'] = stableTelegramInitData;
+
   return headers;
 }
 
@@ -1531,11 +1561,16 @@ function onPointerCancel(event) {
   resetPointer(event);
 }
 
-if (els.enemyWrap) {
-  els.enemyWrap.addEventListener('pointerdown', onPointerDown);
-  els.enemyWrap.addEventListener('pointermove', onPointerMove);
-  els.enemyWrap.addEventListener('pointerup', onPointerUp);
-  els.enemyWrap.addEventListener('pointercancel', onPointerCancel);
+function bindEnemyInput() {
+  if (!els.enemyWrap) return;
+
+  if (window.PointerEvent) {
+    els.enemyWrap.addEventListener('pointerdown', onPointerDown);
+    els.enemyWrap.addEventListener('pointermove', onPointerMove);
+    els.enemyWrap.addEventListener('pointerup', onPointerUp);
+    els.enemyWrap.addEventListener('pointercancel', onPointerCancel);
+    return;
+  }
 
   els.enemyWrap.addEventListener('touchstart', (event) => {
     event.preventDefault();
@@ -1564,6 +1599,8 @@ if (els.enemyWrap) {
     onPointerCancel(touch);
   }, { passive: false });
 }
+
+bindEnemyInput();
 
 els.tapUpgradeBtn?.addEventListener('click', upgradeTap);
 els.startWaveBtn?.addEventListener('click', startWaveAction);
