@@ -55,7 +55,19 @@ def init_db() -> None:
             """
         )
         conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS player_aliases (
+                alias_id TEXT PRIMARY KEY,
+                player_id TEXT NOT NULL,
+                updated_at INTEGER NOT NULL DEFAULT 0
+            )
+            """
+        )
+        conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_players_best_rank ON players(best_score DESC, best_stage DESC, trophies DESC, updated_at ASC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_player_aliases_player_id ON player_aliases(player_id)"
         )
         conn.commit()
 
@@ -134,6 +146,55 @@ def migrate_guest_to_telegram(guest_id: str | None, identity: PlayerIdentity) ->
         conn.commit()
 
 
+
+def save_player_alias(alias_id: str | None, player_id: str | None) -> None:
+    alias = (alias_id or "").strip()[:128]
+    target = (player_id or "").strip()[:128]
+    if not alias or not target or alias == target:
+        return
+    with db_connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO player_aliases (alias_id, player_id, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(alias_id) DO UPDATE SET
+                player_id=excluded.player_id,
+                updated_at=excluded.updated_at
+            """,
+            (alias, target, int(time.time())),
+        )
+        conn.commit()
+
+
+def load_player_alias(alias_id: str | None) -> str | None:
+    alias = (alias_id or "").strip()[:128]
+    if not alias:
+        return None
+    with db_connect() as conn:
+        row = conn.execute(
+            "SELECT player_id FROM player_aliases WHERE alias_id = ?",
+            (alias,),
+        ).fetchone()
+    if row is None:
+        return None
+    player_id = str(row["player_id"] or "").strip()
+    return player_id or None
+
+
+def identity_from_player_row(player_id: str, row: sqlite3.Row | None) -> PlayerIdentity | None:
+    normalized_player_id = str(player_id or "").strip()
+    if not normalized_player_id or row is None:
+        return None
+    display_name = str(row["display_name"] or "").strip() or "Гость степи"
+    username_raw = row["username"]
+    username = str(username_raw).strip() if username_raw else None
+    return PlayerIdentity(
+        player_id=normalized_player_id,
+        display_name=display_name[:64],
+        username=username or None,
+        is_telegram=normalized_player_id.startswith("tg:"),
+    )
+
 def sanitize_identity(raw_user: dict[str, Any] | None, guest_id: str | None) -> PlayerIdentity:
     if raw_user and raw_user.get("id") is not None:
         first = str(raw_user.get("first_name", "") or "").strip()
@@ -152,19 +213,29 @@ def sanitize_identity(raw_user: dict[str, Any] | None, guest_id: str | None) -> 
 
 def get_identity(request: Request) -> PlayerIdentity:
     guest_id = request.headers.get("X-Player-Id") or request.query_params.get("player_id")
+    guest_identity = sanitize_identity(None, guest_id)
     verified_user = verify_telegram_init_data(request.headers.get("X-Telegram-Init-Data", ""))
     if verified_user:
         identity = sanitize_identity(verified_user, None)
         migrate_guest_to_telegram(guest_id, identity)
+        save_player_alias(guest_identity.player_id, identity.player_id)
         return identity
 
     raw_user = parse_telegram_user_header(request.headers.get("X-Telegram-User", ""))
     if raw_user and raw_user.get("id") is not None:
         identity = sanitize_identity(raw_user, None)
         migrate_guest_to_telegram(guest_id, identity)
+        save_player_alias(guest_identity.player_id, identity.player_id)
         return identity
 
-    return sanitize_identity(None, guest_id)
+    alias_player_id = load_player_alias(guest_identity.player_id)
+    if alias_player_id and alias_player_id != guest_identity.player_id:
+        aliased_row = load_player_row(alias_player_id)
+        aliased_identity = identity_from_player_row(alias_player_id, aliased_row)
+        if aliased_identity is not None:
+            return aliased_identity
+
+    return guest_identity
 
 
 def load_player_row(player_id: str) -> sqlite3.Row | None:
@@ -232,9 +303,7 @@ def load_player_state(identity: PlayerIdentity) -> dict[str, Any]:
         data = json.loads(row["state_json"])
         return merge_state(data)
     except Exception:
-        state = default_state()
-        save_player_state(identity, state)
-        return state
+        return default_state()
 
 
 def save_player_state(identity: PlayerIdentity, state: dict[str, Any]) -> None:

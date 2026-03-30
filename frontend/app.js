@@ -126,6 +126,7 @@ let swipeFxTimer = null;
 let holdChargeTimer = null;
 const TELEGRAM_USER_CACHE_KEY = 'steppe_shaman_tg_user';
 const TELEGRAM_INIT_DATA_CACHE_KEY = 'steppe_shaman_tg_init_data';
+const TELEGRAM_INIT_DATA_LOCAL_CACHE_KEY = 'steppe_shaman_tg_init_data_local';
 
 let telegramUser = null;
 let telegramInitData = '';
@@ -141,7 +142,7 @@ try {
   telegramUser = null;
 }
 try {
-  telegramInitData = sessionStorage.getItem(TELEGRAM_INIT_DATA_CACHE_KEY) || '';
+  telegramInitData = sessionStorage.getItem(TELEGRAM_INIT_DATA_CACHE_KEY) || localStorage.getItem(TELEGRAM_INIT_DATA_LOCAL_CACHE_KEY) || '';
 } catch (_) {
   telegramInitData = '';
 }
@@ -259,7 +260,10 @@ function initTelegram() {
   telegramUser = nextTelegramUser;
 
   try {
-    if (telegramInitData) sessionStorage.setItem(TELEGRAM_INIT_DATA_CACHE_KEY, telegramInitData);
+    if (telegramInitData) {
+      sessionStorage.setItem(TELEGRAM_INIT_DATA_CACHE_KEY, telegramInitData);
+      localStorage.setItem(TELEGRAM_INIT_DATA_LOCAL_CACHE_KEY, telegramInitData);
+    }
   } catch (_) {}
   try {
     if (telegramUser) localStorage.setItem(TELEGRAM_USER_CACHE_KEY, JSON.stringify(telegramUser));
